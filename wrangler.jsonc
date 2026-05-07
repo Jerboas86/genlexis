@@ -21,6 +21,9 @@
 	"vars": {
 		"ORIGIN": "https://genlexis.com"
 	},
+	"secrets": {
+		"required": ["PRIVATE_DATABASE_URL", "BETTER_AUTH_SECRET"]
+	},
 	"workers_dev": true,
 	"preview_urls": true
 }

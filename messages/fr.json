@@ -27,7 +27,7 @@
 	"generate_button": "Générer la liste",
 	"generate_refresh": "Générer à nouveau",
 	"generate_disabled_body": "La génération sera disponible lorsqu’au moins {count} phrases auront été jugées conformes.",
-	"generate_ready_body": "Le corpus accepté est prêt.",
+	"generate_ready_body": "Génération disponible.",
 	"generate_copy": "Copier",
 	"generate_copied": "Copié"
 }

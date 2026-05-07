@@ -226,9 +226,13 @@
 			margin-left: 0;
 		}
 
-		button,
-		form {
+		.status > form,
+		.status > .button-primary {
 			width: 100%;
+		}
+
+		ol {
+			padding-top: var(--space-xl);
 		}
 	}
 </style>

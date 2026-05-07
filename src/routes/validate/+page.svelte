@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Pathname } from '$app/types';
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 	import { localizeHref } from '$lib/paraglide/runtime';
@@ -28,13 +29,13 @@
 		</article>
 
 		<div class="vote-actions" aria-label={m.validate_actions_label()}>
-			<form method="post" action="?/incorrect">
+			<form method="post" action="?/incorrect" use:enhance>
 				<input type="hidden" name="sentenceId" value={data.candidate.sentenceId} />
 				<button class="vote-button vote-button-incorrect" type="submit">
 					{m.validate_incorrect()}
 				</button>
 			</form>
-			<form method="post" action="?/correct">
+			<form method="post" action="?/correct" use:enhance>
 				<input type="hidden" name="sentenceId" value={data.candidate.sentenceId} />
 				<button class="vote-button vote-button-correct" type="submit">{m.validate_correct()}</button
 				>

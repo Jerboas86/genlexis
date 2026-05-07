@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Pathname } from '$app/types';
+	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 	import { localizeHref } from '$lib/paraglide/runtime';
@@ -43,7 +44,7 @@
 				<p class="notice">{m.generate_ready_body()}</p>
 			{/if}
 
-			<form method="post">
+			<form method="post" use:enhance>
 				<button class="button-primary" type="submit" disabled={!data.canGenerate}>
 					{sentences.length ? m.generate_refresh() : m.generate_button()}
 				</button>

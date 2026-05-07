@@ -48,6 +48,8 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_GENLEXIS }}
 
   deploy:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)

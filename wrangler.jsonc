@@ -8,6 +8,19 @@
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
+	"routes": [
+		{
+			"pattern": "genlexis.com",
+			"custom_domain": true
+		},
+		{
+			"pattern": "www.genlexis.com",
+			"custom_domain": true
+		}
+	],
+	"vars": {
+		"ORIGIN": "https://genlexis.com"
+	},
 	"workers_dev": true,
 	"preview_urls": true
 }

@@ -4,6 +4,7 @@
 	"version": "0.0.1",
 	"license": "AGPL-3.0-only",
 	"type": "module",
+	"packageManager": "pnpm@11.0.0",
 	"scripts": {
 		"dev": "doppler run -p genlexis -c dev -- vite dev",
 		"build": "doppler run -p genlexis -c prod -- vite build",

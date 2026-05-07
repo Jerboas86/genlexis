@@ -1,12 +1,14 @@
 <script lang="ts">
 	import type { Pathname } from '$app/types';
-	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 	import { localizeHref } from '$lib/paraglide/runtime';
-	import type { PageServerData } from './$types';
+	import { candidate, correct, incorrect } from './data.remote';
 
-	let { data }: { data: PageServerData } = $props();
+	const query = candidate();
+	// Await once so the value is available during SSR/hydration; subsequent updates
+	// are read reactively via `query.current`.
+	await query;
 </script>
 
 <svelte:head>
@@ -21,22 +23,22 @@
 		<p class="lede">{m.validate_instruction()}</p>
 	</section>
 
-	{#if data.candidate}
+	{#if query.current}
 		<article class="candidate" aria-labelledby="candidate-heading">
 			<h2 id="candidate-heading">{m.validate_candidate_label()}</h2>
-			<p class="sentence">{data.candidate.sentence}</p>
-			<p class="meta">{m.validate_vote_count({ count: data.candidate.voteCount })}</p>
+			<p class="sentence">{query.current.sentence}</p>
+			<p class="meta">{m.validate_vote_count({ count: query.current.voteCount })}</p>
 		</article>
 
 		<div class="vote-actions" aria-label={m.validate_actions_label()}>
-			<form method="post" action="?/incorrect" use:enhance>
-				<input type="hidden" name="sentenceId" value={data.candidate.sentenceId} />
+			<form {...incorrect}>
+				<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
 				<button class="vote-button vote-button-incorrect" type="submit">
 					{m.validate_incorrect()}
 				</button>
 			</form>
-			<form method="post" action="?/correct" use:enhance>
-				<input type="hidden" name="sentenceId" value={data.candidate.sentenceId} />
+			<form {...correct}>
+				<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
 				<button class="vote-button vote-button-correct" type="submit">{m.validate_correct()}</button
 				>
 			</form>

@@ -1,14 +1,14 @@
 <script lang="ts">
 	import type { Pathname } from '$app/types';
-	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 	import { localizeHref } from '$lib/paraglide/runtime';
-	import type { ActionData, PageServerData } from './$types';
+	import { acceptedSummary, generate } from './data.remote';
 
-	let { data, form }: { data: PageServerData; form: ActionData } = $props();
-
-	const sentences = $derived(form && 'sentences' in form ? (form.sentences ?? []) : []);
+	const summaryQuery = acceptedSummary();
+	await summaryQuery;
+	const summary = $derived(summaryQuery.current!);
+	const sentences = $derived(generate.result?.sentences ?? []);
 
 	let copied = $state(false);
 	let copyResetTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -33,25 +33,25 @@
 
 	<section class="page-header">
 		<h1>{m.generate_title()}</h1>
-		<p class="lede">{m.generate_instruction({ count: data.requiredCount })}</p>
+		<p class="lede">{m.generate_instruction({ count: summary.requiredCount })}</p>
 	</section>
 
 	<section class="panel" aria-live="polite">
 		<div class="status">
-			{#if !data.canGenerate}
-				<p class="notice">{m.generate_disabled_body({ count: data.requiredCount })}</p>
+			{#if !summary.canGenerate}
+				<p class="notice">{m.generate_disabled_body({ count: summary.requiredCount })}</p>
 			{:else if !sentences.length}
 				<p class="notice">{m.generate_ready_body()}</p>
 			{/if}
 
-			<form method="post" use:enhance>
-				<button class="button-primary" type="submit" disabled={!data.canGenerate}>
+			<form {...generate}>
+				<button class="button-primary" type="submit" disabled={!summary.canGenerate}>
 					{sentences.length ? m.generate_refresh() : m.generate_button()}
 				</button>
 			</form>
 		</div>
 
-		{#if data.canGenerate && sentences.length}
+		{#if summary.canGenerate && sentences.length}
 			<div class="results">
 				<ol>
 					{#each sentences as sentence (sentence.sentenceId)}

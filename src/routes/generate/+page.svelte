@@ -1,5 +1,8 @@
 <script lang="ts">
+	import type { Pathname } from '$app/types';
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
+	import { localizeHref } from '$lib/paraglide/runtime';
 	import type { ActionData, PageServerData } from './$types';
 
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
@@ -12,7 +15,7 @@
 </svelte:head>
 
 <main class="shell">
-	<a class="back" href="/">{m.back_home()}</a>
+	<a class="back" href={resolve(localizeHref('/') as Pathname)}>{m.back_home()}</a>
 
 	<section class="page-header">
 		<h1>{m.generate_title()}</h1>

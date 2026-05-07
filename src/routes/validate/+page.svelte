@@ -1,5 +1,8 @@
 <script lang="ts">
+	import type { Pathname } from '$app/types';
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
+	import { localizeHref } from '$lib/paraglide/runtime';
 	import type { PageServerData } from './$types';
 
 	let { data }: { data: PageServerData } = $props();
@@ -10,7 +13,7 @@
 </svelte:head>
 
 <main class="shell">
-	<a class="back" href="/">{m.back_home()}</a>
+	<a class="back" href={resolve(localizeHref('/') as Pathname)}>{m.back_home()}</a>
 
 	<section class="page-header">
 		<h1>{m.validate_title()}</h1>
@@ -33,7 +36,8 @@
 			</form>
 			<form method="post" action="?/correct">
 				<input type="hidden" name="sentenceId" value={data.candidate.sentenceId} />
-				<button class="vote-button vote-button-correct" type="submit">{m.validate_correct()}</button>
+				<button class="vote-button vote-button-correct" type="submit">{m.validate_correct()}</button
+				>
 			</form>
 		</div>
 	{:else}

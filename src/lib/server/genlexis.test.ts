@@ -39,7 +39,9 @@ describe('genlexis server helpers', () => {
 			validationStatus: 'unreviewed' as const
 		};
 		const repository = makeRepository({
-			findRandomValidationCandidate: vi.fn(async (status) => (status === 'unreviewed' ? candidate : null))
+			findRandomValidationCandidate: vi.fn(async (status) =>
+				status === 'unreviewed' ? candidate : null
+			)
 		});
 
 		await expect(getValidationCandidate(repository)).resolves.toEqual(candidate);

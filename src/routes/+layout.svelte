@@ -13,7 +13,7 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <header class="site-header">
-	<a class="brand" href="/">
+	<a class="brand" href={resolve(localizeHref('/') as Pathname)}>
 		<strong>{m.app_name()}</strong>
 		<span>{m.app_caption()}</span>
 	</a>

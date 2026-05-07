@@ -17,7 +17,9 @@ export type SentenceSummary = {
 export type AcceptedSentence = Pick<SentenceSummary, 'sentenceId' | 'sentence' | 'pattern'>;
 
 export type GenlexisRepository = {
-	findRandomValidationCandidate: (status: 'unreviewed' | 'needs_more_votes') => Promise<SentenceSummary | null>;
+	findRandomValidationCandidate: (
+		status: 'unreviewed' | 'needs_more_votes'
+	) => Promise<SentenceSummary | null>;
 	recordValidation: (sentenceId: number, isCorrect: boolean) => Promise<void>;
 	countAcceptedSentences: () => Promise<number>;
 	findRandomAcceptedSentences: (limit: number) => Promise<AcceptedSentence[]>;

@@ -1,5 +1,8 @@
 <script lang="ts">
+	import type { Pathname } from '$app/types';
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
+	import { localizeHref } from '$lib/paraglide/runtime';
 </script>
 
 <svelte:head>
@@ -13,12 +16,12 @@
 	</section>
 
 	<nav aria-label={m.home_navigation_label()} class="actions">
-		<a class="product-card coral" href="/validate">
+		<a class="product-card coral" href={resolve(localizeHref('/validate') as Pathname)}>
 			<small>01</small>
 			<strong>{m.validate_title()}</strong>
 			<span>{m.home_validate_description()}</span>
 		</a>
-		<a class="product-card blue" href="/generate">
+		<a class="product-card blue" href={resolve(localizeHref('/generate') as Pathname)}>
 			<small>02</small>
 			<strong>{m.generate_title()}</strong>
 			<span>{m.home_generate_description()}</span>

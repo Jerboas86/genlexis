@@ -8,6 +8,19 @@
 	let { data, form }: { data: PageServerData; form: ActionData } = $props();
 
 	const sentences = $derived(form && 'sentences' in form ? (form.sentences ?? []) : []);
+
+	let copied = $state(false);
+	let copyResetTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	async function copySentences() {
+		const text = sentences.map((s) => s.sentence).join('\n');
+		await navigator.clipboard.writeText(text);
+		copied = true;
+		clearTimeout(copyResetTimeout);
+		copyResetTimeout = setTimeout(() => {
+			copied = false;
+		}, 2000);
+	}
 </script>
 
 <svelte:head>
@@ -38,11 +51,16 @@
 		</div>
 
 		{#if data.canGenerate && sentences.length}
-			<ol>
-				{#each sentences as sentence (sentence.sentenceId)}
-					<li>{sentence.sentence}</li>
-				{/each}
-			</ol>
+			<div class="results">
+				<ol>
+					{#each sentences as sentence (sentence.sentenceId)}
+						<li>{sentence.sentence}</li>
+					{/each}
+				</ol>
+				<button class="copy" type="button" onclick={copySentences} aria-live="polite">
+					{copied ? m.generate_copied() : m.generate_copy()}
+				</button>
+			</div>
 		{/if}
 	</section>
 </main>
@@ -128,6 +146,30 @@
 		background: var(--color-charcoal);
 	}
 
+	.results {
+		position: relative;
+		margin-top: var(--space-xl);
+	}
+
+	.copy {
+		position: absolute;
+		top: 0;
+		right: 0;
+		min-height: 0;
+		padding: var(--space-xxs) var(--space-xs);
+		color: var(--color-slate);
+		font-size: var(--font-size-body-sm);
+		font-weight: var(--font-weight-medium);
+		background: transparent;
+		border: none;
+		border-radius: var(--button-radius);
+	}
+
+	.copy:hover {
+		color: var(--color-ink);
+		background: var(--color-hairline);
+	}
+
 	button:disabled {
 		color: var(--color-muted);
 		background: var(--color-hairline);
@@ -145,7 +187,7 @@
 	ol {
 		display: grid;
 		gap: var(--space-md);
-		margin: var(--space-xl) 0 0;
+		margin: 0;
 		padding-left: var(--space-xl);
 	}
 

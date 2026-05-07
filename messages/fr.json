@@ -26,6 +26,6 @@
 	"generate_count": "{accepted} / {required} phrases acceptées",
 	"generate_button": "Générer la liste",
 	"generate_refresh": "Générer à nouveau",
-	"generate_disabled_body": "La génération sera disponible dès qu'au moins {count} phrases acceptées seront prêtes.",
+	"generate_disabled_body": "La génération sera disponible lorsqu’au moins {count} phrases auront été jugées conformes.",
 	"generate_ready_body": "Le corpus accepté est prêt."
 }

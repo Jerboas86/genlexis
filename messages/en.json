@@ -26,6 +26,6 @@
 	"generate_count": "{accepted} / {required} accepted sentences",
 	"generate_button": "Generate list",
 	"generate_refresh": "Generate again",
-	"generate_disabled_body": "Generation unlocks when at least {count} accepted sentences are available.",
+	"generate_disabled_body": "Generation will be available when at least {count} sentences have been judged compliant.",
 	"generate_ready_body": "The accepted corpus is ready."
 }

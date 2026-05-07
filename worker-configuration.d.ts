@@ -3,7 +3,7 @@
 // Runtime types generated with workerd@1.20260504.1 2026-04-28 nodejs_als,nodejs_compat
 declare namespace Cloudflare {
 	interface GlobalProps {
-		mainModule: typeof import("./.svelte-kit/cloudflare/_worker");
+		mainModule: unknown;
 	}
 	interface Env {
 		ASSETS: Fetcher;

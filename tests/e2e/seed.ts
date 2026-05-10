@@ -18,8 +18,6 @@ type SentenceSpec = {
 	tokens: { slot: 'det' | 'noun'; entryRef: string }[];
 };
 
-type DbId = string;
-
 // Made-up noun surfaces avoid clashing with real production lexicon.
 export const NOUN_MS = 'xetax';
 export const NOUN_MP = 'xetaxs';
@@ -83,9 +81,8 @@ export const seedE2eFixtures = async () => {
 
 	await cleanupE2eFixtures();
 
-	const insertedEntries = new Map<string, DbId>();
 	for (const entry of lexicalEntries) {
-		const rows = (await sql`
+		await sql`
 			INSERT INTO aud.lexical_entries (
 				language, source, source_ref, surface, gender, number, category
 			) VALUES (
@@ -96,42 +93,48 @@ export const seedE2eFixtures = async () => {
 				${entry.gender ?? null},
 				${entry.number ?? null},
 				${entry.category ?? null}
-			) RETURNING id
-		`) as { id: DbId }[];
-		insertedEntries.set(entry.ref, rows[0].id);
+			)
+		`;
 	}
 
 	for (const spec of sentences) {
-		const sentenceRows = (await sql`
+		await sql`
 			INSERT INTO aud.generated_sentences (language, sentence, pattern)
 			VALUES (${LANGUAGE}::aud.lang_code, ${spec.sentence}, ${spec.pattern})
-			RETURNING id
-		`) as { id: DbId }[];
-		const sentenceId = sentenceRows[0].id;
+		`;
 
 		for (let i = 0; i < spec.tokens.length; i++) {
 			const token = spec.tokens[i];
-			const entryId = insertedEntries.get(token.entryRef);
-			if (!entryId) throw new Error(`Missing seeded entry ${token.entryRef}`);
 			const surface = lexicalEntries.find((e) => e.ref === token.entryRef)!.surface;
 			await sql`
 				INSERT INTO aud.generated_sentence_tokens (
 					sentence_id, language, position, slot, surface, lexical_entry_id
-				) VALUES (
-					${sentenceId},
-					${LANGUAGE}::aud.lang_code,
+				)
+				SELECT
+					s.id,
+					s.language,
 					${i + 1},
 					${token.slot},
 					${surface},
-					${entryId}
-				)
+					le.id
+				FROM aud.generated_sentences s
+				JOIN aud.lexical_entries le
+					ON le.language = s.language
+					AND le.source = ${SOURCE_MARKER}
+					AND le.source_ref = ${token.entryRef}
+				WHERE s.language = ${LANGUAGE}::aud.lang_code
+					AND s.sentence = ${spec.sentence}
 			`;
 		}
 
 		// Two correct votes → validation_status = 'accepted'.
 		await sql`
 			INSERT INTO aud.generated_sentence_validations (sentence_id, is_correct)
-			VALUES (${sentenceId}, true), (${sentenceId}, true)
+			SELECT s.id, v.is_correct
+			FROM aud.generated_sentences s
+			CROSS JOIN (VALUES (true), (true)) AS v(is_correct)
+			WHERE s.language = ${LANGUAGE}::aud.lang_code
+				AND s.sentence = ${spec.sentence}
 		`;
 	}
 };

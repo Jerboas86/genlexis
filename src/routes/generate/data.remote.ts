@@ -8,6 +8,7 @@ import {
 	type Gender,
 	type GrammNumber,
 	type LengthUnit,
+	type LexicalDensity,
 	type SupportedPattern
 } from '$lib/server/genlexis';
 
@@ -21,6 +22,7 @@ const DET_TYPES: DetType[] = ['definite', 'indefinite'];
 const GENDERS: Gender[] = ['m', 'f'];
 const GRAMM_NUMBERS: GrammNumber[] = ['s', 'p'];
 const LENGTH_UNITS: LengthUnit[] = ['syllables', 'phonemes'];
+const LEXICAL_DENSITIES: LexicalDensity[] = ['high', 'medium', 'low'];
 
 export const acceptedSummary = query(async () => {
 	const acceptedCount = await getAcceptedSentenceCount();
@@ -65,6 +67,7 @@ export const generate = form(
 		const grammNumber = parseEnum<GrammNumber>(data.grammNumber, GRAMM_NUMBERS);
 		const lengthUnit = parseEnum<LengthUnit>(data.lengthUnit, LENGTH_UNITS) ?? 'syllables';
 		const length = parseOptionalInteger(data.length, 1, MAX_NOUN_LENGTH);
+		const lexicalDensity = parseEnum<LexicalDensity>(data.lexicalDensity, LEXICAL_DENSITIES);
 		const listCount = parseInteger(data.listCount, 1, MAX_LISTS, 1);
 		const itemsPerList = parseInteger(data.itemsPerList, 1, MAX_ITEMS_PER_LIST, 10);
 
@@ -75,6 +78,7 @@ export const generate = form(
 			grammNumber,
 			lengthUnit: length !== undefined ? lengthUnit : undefined,
 			length,
+			lexicalDensity,
 			listCount,
 			itemsPerList
 		});

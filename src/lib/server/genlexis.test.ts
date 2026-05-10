@@ -114,6 +114,7 @@ describe('genlexis server helpers', () => {
 			grammNumber: 'p',
 			lengthUnit: undefined,
 			length: undefined,
+			lexicalDensity: undefined,
 			limit: 6
 		} satisfies FindAcceptedItemsOptions);
 		expect(result.lists).toHaveLength(3);

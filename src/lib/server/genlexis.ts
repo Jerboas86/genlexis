@@ -23,6 +23,7 @@ export type DetType = 'definite' | 'indefinite';
 export type Gender = 'm' | 'f';
 export type GrammNumber = 's' | 'p';
 export type LengthUnit = 'syllables' | 'phonemes';
+export type LexicalDensity = 'high' | 'medium' | 'low';
 
 export type GenerateOptions = {
 	pattern: SupportedPattern;
@@ -31,6 +32,7 @@ export type GenerateOptions = {
 	grammNumber?: GrammNumber;
 	lengthUnit?: LengthUnit;
 	length?: number;
+	lexicalDensity?: LexicalDensity;
 	listCount: number;
 	itemsPerList: number;
 };
@@ -49,6 +51,7 @@ export type FindAcceptedItemsOptions = {
 	grammNumber?: GrammNumber;
 	lengthUnit?: LengthUnit;
 	length?: number;
+	lexicalDensity?: LexicalDensity;
 	limit: number;
 };
 
@@ -112,6 +115,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		grammNumber,
 		lengthUnit,
 		length,
+		lexicalDensity,
 		limit
 	}) {
 		const detJoin: SQL =
@@ -140,6 +144,15 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					: sql`AND noun_le.syllable_count = ${length}`
 				: sql``;
 
+		const lexicalDensityFilter: SQL =
+			lexicalDensity === 'high'
+				? sql`AND noun_le.pld20 IS NOT NULL AND noun_le.pld20 < 2.0`
+				: lexicalDensity === 'medium'
+					? sql`AND noun_le.pld20 IS NOT NULL AND noun_le.pld20 >= 2.0 AND noun_le.pld20 <= 3.2`
+					: lexicalDensity === 'low'
+						? sql`AND noun_le.pld20 IS NOT NULL AND noun_le.pld20 > 3.2`
+						: sql``;
+
 		const result = await db.execute<AcceptedItem>(sql`
 			WITH candidates AS (
 				SELECT DISTINCT ON (LOWER(noun_token.surface))
@@ -161,6 +174,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					${genderFilter}
 					${numberFilter}
 					${lengthFilter}
+					${lexicalDensityFilter}
 					${detFilter}
 				ORDER BY LOWER(noun_token.surface), random()
 			)
@@ -213,6 +227,7 @@ export const generateAcceptedSentences = async (
 		grammNumber: options.grammNumber,
 		lengthUnit: options.lengthUnit,
 		length: options.length,
+		lexicalDensity: options.lexicalDensity,
 		limit: target
 	});
 

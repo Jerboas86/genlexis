@@ -19,6 +19,7 @@
 	let grammNumber = $state<'' | 's' | 'p'>('');
 	let lengthUnit = $state<'syllables' | 'phonemes'>('syllables');
 	let length = $state<number | ''>('');
+	let lexicalDensity = $state<'' | 'high' | 'medium' | 'low'>('');
 	let listCount = $state(1);
 	let itemsPerList = $state(10);
 
@@ -125,6 +126,16 @@
 						placeholder={m.generate_length_any()}
 						bind:value={length}
 					/>
+				</div>
+
+				<div class="field">
+					<label for="lexicalDensity">{m.generate_lexical_density_label()}</label>
+					<select id="lexicalDensity" name="lexicalDensity" bind:value={lexicalDensity}>
+						<option value="">{m.generate_lexical_density_any()}</option>
+						<option value="high">{m.generate_lexical_density_high()}</option>
+						<option value="medium">{m.generate_lexical_density_medium()}</option>
+						<option value="low">{m.generate_lexical_density_low()}</option>
+					</select>
 				</div>
 			</fieldset>
 

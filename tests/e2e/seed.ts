@@ -18,6 +18,8 @@ type SentenceSpec = {
 	tokens: { slot: 'det' | 'noun'; entryRef: string }[];
 };
 
+type DbId = string;
+
 // Made-up noun surfaces avoid clashing with real production lexicon.
 export const NOUN_MS = 'xetax';
 export const NOUN_MP = 'xetaxs';
@@ -81,7 +83,7 @@ export const seedE2eFixtures = async () => {
 
 	await cleanupE2eFixtures();
 
-	const insertedEntries = new Map<string, number>();
+	const insertedEntries = new Map<string, DbId>();
 	for (const entry of lexicalEntries) {
 		const rows = (await sql`
 			INSERT INTO aud.lexical_entries (
@@ -95,8 +97,8 @@ export const seedE2eFixtures = async () => {
 				${entry.number ?? null},
 				${entry.category ?? null}
 			) RETURNING id
-		`) as { id: number | string }[];
-		insertedEntries.set(entry.ref, Number(rows[0].id));
+		`) as { id: DbId }[];
+		insertedEntries.set(entry.ref, rows[0].id);
 	}
 
 	for (const spec of sentences) {
@@ -104,8 +106,8 @@ export const seedE2eFixtures = async () => {
 			INSERT INTO aud.generated_sentences (language, sentence, pattern)
 			VALUES (${LANGUAGE}::aud.lang_code, ${spec.sentence}, ${spec.pattern})
 			RETURNING id
-		`) as { id: number | string }[];
-		const sentenceId = Number(sentenceRows[0].id);
+		`) as { id: DbId }[];
+		const sentenceId = sentenceRows[0].id;
 
 		for (let i = 0; i < spec.tokens.length; i++) {
 			const token = spec.tokens[i];
@@ -136,6 +138,14 @@ export const seedE2eFixtures = async () => {
 
 export const cleanupE2eFixtures = async () => {
 	const sql = getClient();
+
+	for (const spec of sentences) {
+		await sql`
+			DELETE FROM aud.generated_sentences
+			WHERE language = ${LANGUAGE}::aud.lang_code
+				AND sentence = ${spec.sentence}
+		`;
+	}
 
 	await sql`
 		DELETE FROM aud.generated_sentences

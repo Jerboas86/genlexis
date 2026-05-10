@@ -7,6 +7,7 @@
 
 	const MAX_LISTS = 5;
 	const MAX_ITEMS_PER_LIST = 50;
+	const MAX_NOUN_LENGTH = 20;
 
 	const summaryQuery = acceptedSummary();
 	await summaryQuery;
@@ -16,6 +17,8 @@
 	let detType = $state<'' | 'definite' | 'indefinite'>('');
 	let gender = $state<'' | 'm' | 'f'>('');
 	let grammNumber = $state<'' | 's' | 'p'>('');
+	let lengthUnit = $state<'syllables' | 'phonemes'>('syllables');
+	let length = $state<number | ''>('');
 	let listCount = $state(1);
 	let itemsPerList = $state(10);
 
@@ -82,23 +85,48 @@
 				</div>
 			{/if}
 
-			<div class="field">
-				<label for="gender">{m.generate_gender_label()}</label>
-				<select id="gender" name="gender" bind:value={gender}>
-					<option value="">{m.generate_gender_any()}</option>
-					<option value="m">{m.generate_gender_masculine()}</option>
-					<option value="f">{m.generate_gender_feminine()}</option>
-				</select>
-			</div>
+			<fieldset class="group">
+				<legend>{m.generate_noun_legend()}</legend>
 
-			<div class="field">
-				<label for="grammNumber">{m.generate_number_label()}</label>
-				<select id="grammNumber" name="grammNumber" bind:value={grammNumber}>
-					<option value="">{m.generate_number_any()}</option>
-					<option value="s">{m.generate_number_singular()}</option>
-					<option value="p">{m.generate_number_plural()}</option>
-				</select>
-			</div>
+				<div class="field">
+					<label for="gender">{m.generate_gender_label()}</label>
+					<select id="gender" name="gender" bind:value={gender}>
+						<option value="">{m.generate_gender_any()}</option>
+						<option value="m">{m.generate_gender_masculine()}</option>
+						<option value="f">{m.generate_gender_feminine()}</option>
+					</select>
+				</div>
+
+				<div class="field">
+					<label for="grammNumber">{m.generate_number_label()}</label>
+					<select id="grammNumber" name="grammNumber" bind:value={grammNumber}>
+						<option value="">{m.generate_number_any()}</option>
+						<option value="s">{m.generate_number_singular()}</option>
+						<option value="p">{m.generate_number_plural()}</option>
+					</select>
+				</div>
+
+				<div class="field">
+					<label for="lengthUnit">{m.generate_length_unit_label()}</label>
+					<select id="lengthUnit" name="lengthUnit" bind:value={lengthUnit}>
+						<option value="syllables">{m.generate_length_unit_syllables()}</option>
+						<option value="phonemes">{m.generate_length_unit_phonemes()}</option>
+					</select>
+				</div>
+
+				<div class="field">
+					<label for="length">{m.generate_length_label()}</label>
+					<input
+						id="length"
+						name="length"
+						type="number"
+						min="1"
+						max={MAX_NOUN_LENGTH}
+						placeholder={m.generate_length_any()}
+						bind:value={length}
+					/>
+				</div>
+			</fieldset>
 
 			<div class="field">
 				<label for="listCount">{m.generate_list_count_label()}</label>
@@ -225,6 +253,25 @@
 		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 		gap: var(--space-md);
 		align-items: end;
+	}
+
+	.group {
+		grid-column: 1 / -1;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		gap: var(--space-md);
+		align-items: end;
+		margin: 0;
+		padding: var(--space-md) var(--space-lg) var(--space-lg);
+		border: 1px solid var(--color-hairline);
+		border-radius: var(--radius-md);
+	}
+
+	.group legend {
+		padding: 0 var(--space-xs);
+		color: var(--color-slate);
+		font-size: var(--font-size-body-sm);
+		font-weight: var(--font-weight-medium);
 	}
 
 	.field {

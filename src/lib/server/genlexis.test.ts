@@ -112,6 +112,8 @@ describe('genlexis server helpers', () => {
 			detType: 'definite',
 			gender: 'f',
 			grammNumber: 'p',
+			lengthUnit: undefined,
+			length: undefined,
 			limit: 6
 		} satisfies FindAcceptedItemsOptions);
 		expect(result.lists).toHaveLength(3);

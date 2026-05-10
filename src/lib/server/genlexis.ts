@@ -22,12 +22,15 @@ export type SupportedPattern = 'det_noun' | 'noun';
 export type DetType = 'definite' | 'indefinite';
 export type Gender = 'm' | 'f';
 export type GrammNumber = 's' | 'p';
+export type LengthUnit = 'syllables' | 'phonemes';
 
 export type GenerateOptions = {
 	pattern: SupportedPattern;
 	detType?: DetType;
 	gender?: Gender;
 	grammNumber?: GrammNumber;
+	lengthUnit?: LengthUnit;
+	length?: number;
 	listCount: number;
 	itemsPerList: number;
 };
@@ -44,6 +47,8 @@ export type FindAcceptedItemsOptions = {
 	detType?: DetType;
 	gender?: Gender;
 	grammNumber?: GrammNumber;
+	lengthUnit?: LengthUnit;
+	length?: number;
 	limit: number;
 };
 
@@ -100,7 +105,15 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		return normalizeCount(result.rows[0]?.count ?? 0);
 	},
 
-	async findRandomAcceptedItems({ pattern, detType, gender, grammNumber, limit }) {
+	async findRandomAcceptedItems({
+		pattern,
+		detType,
+		gender,
+		grammNumber,
+		lengthUnit,
+		length,
+		limit
+	}) {
 		const detJoin: SQL =
 			pattern === 'det_noun'
 				? sql`JOIN aud.generated_sentence_tokens det_token
@@ -120,6 +133,12 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 
 		const genderFilter: SQL = gender ? sql`AND noun_le.gender = ${gender}` : sql``;
 		const numberFilter: SQL = grammNumber ? sql`AND noun_le.number = ${grammNumber}` : sql``;
+		const lengthFilter: SQL =
+			length !== undefined
+				? lengthUnit === 'phonemes'
+					? sql`AND noun_le.phoneme_count = ${length}`
+					: sql`AND noun_le.syllable_count = ${length}`
+				: sql``;
 
 		const result = await db.execute<AcceptedItem>(sql`
 			WITH candidates AS (
@@ -141,6 +160,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					AND s.pattern = ${pattern}
 					${genderFilter}
 					${numberFilter}
+					${lengthFilter}
 					${detFilter}
 				ORDER BY LOWER(noun_token.surface), random()
 			)
@@ -191,6 +211,8 @@ export const generateAcceptedSentences = async (
 		detType: options.detType,
 		gender: options.gender,
 		grammNumber: options.grammNumber,
+		lengthUnit: options.lengthUnit,
+		length: options.length,
 		limit: target
 	});
 

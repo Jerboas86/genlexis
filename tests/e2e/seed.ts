@@ -1,7 +1,26 @@
 import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
 
-const SOURCE_MARKER = 'e2e-genlexis-test';
 const LANGUAGE = 'fr-FR';
+const MAX_FIXTURE_LENGTH = 20;
+
+const fixtureNamespace = [
+	process.env.GITHUB_RUN_ID,
+	process.env.GITHUB_RUN_ATTEMPT,
+	process.env.GITHUB_JOB,
+	process.env.TEST_WORKER_INDEX,
+	process.pid
+]
+	.filter(Boolean)
+	.join('-')
+	.replace(/[^a-zA-Z0-9-]/g, '-')
+	.toLowerCase();
+
+const SOURCE_MARKER = `e2e-genlexis-test-${fixtureNamespace}`;
+const FIXTURE_SUFFIX = fixtureNamespace.replace(/-/g, '') || 'local';
+export const FIXTURE_PHONEME_COUNT =
+	(FIXTURE_SUFFIX.split('').reduce((total, char) => total + char.charCodeAt(0), 0) %
+		MAX_FIXTURE_LENGTH) +
+	1;
 
 type LexicalEntrySpec = {
 	ref: string;
@@ -9,6 +28,7 @@ type LexicalEntrySpec = {
 	gender?: 'm' | 'f';
 	number?: 's' | 'p';
 	category?: string;
+	phonemeCount?: number;
 };
 
 type SentenceSpec = {
@@ -19,10 +39,10 @@ type SentenceSpec = {
 };
 
 // Made-up noun surfaces avoid clashing with real production lexicon.
-export const NOUN_MS = 'xetax';
-export const NOUN_MP = 'xetaxs';
-export const NOUN_FS = 'yutame';
-export const NOUN_FP = 'yutames';
+export const NOUN_MS = `xetax${FIXTURE_SUFFIX}`;
+export const NOUN_MP = `xetaxs${FIXTURE_SUFFIX}`;
+export const NOUN_FS = `yutame${FIXTURE_SUFFIX}`;
+export const NOUN_FP = `yutames${FIXTURE_SUFFIX}`;
 
 const lexicalEntries: LexicalEntrySpec[] = [
 	{ ref: 'det-le', surface: 'le', gender: 'm', number: 's', category: 'det' },
@@ -30,10 +50,38 @@ const lexicalEntries: LexicalEntrySpec[] = [
 	{ ref: 'det-les', surface: 'les', number: 'p', category: 'det' },
 	{ ref: 'det-un', surface: 'un', gender: 'm', number: 's', category: 'det' },
 	{ ref: 'det-une', surface: 'une', gender: 'f', number: 's', category: 'det' },
-	{ ref: 'noun-ms', surface: NOUN_MS, gender: 'm', number: 's', category: 'noun' },
-	{ ref: 'noun-mp', surface: NOUN_MP, gender: 'm', number: 'p', category: 'noun' },
-	{ ref: 'noun-fs', surface: NOUN_FS, gender: 'f', number: 's', category: 'noun' },
-	{ ref: 'noun-fp', surface: NOUN_FP, gender: 'f', number: 'p', category: 'noun' }
+	{
+		ref: 'noun-ms',
+		surface: NOUN_MS,
+		gender: 'm',
+		number: 's',
+		category: 'noun',
+		phonemeCount: FIXTURE_PHONEME_COUNT
+	},
+	{
+		ref: 'noun-mp',
+		surface: NOUN_MP,
+		gender: 'm',
+		number: 'p',
+		category: 'noun',
+		phonemeCount: FIXTURE_PHONEME_COUNT
+	},
+	{
+		ref: 'noun-fs',
+		surface: NOUN_FS,
+		gender: 'f',
+		number: 's',
+		category: 'noun',
+		phonemeCount: FIXTURE_PHONEME_COUNT
+	},
+	{
+		ref: 'noun-fp',
+		surface: NOUN_FP,
+		gender: 'f',
+		number: 'p',
+		category: 'noun',
+		phonemeCount: FIXTURE_PHONEME_COUNT
+	}
 ];
 
 const dn = (det: string, noun: string, detRef: string, nounRef: string): SentenceSpec => ({
@@ -84,7 +132,7 @@ export const seedE2eFixtures = async () => {
 	for (const entry of lexicalEntries) {
 		await sql`
 			INSERT INTO aud.lexical_entries (
-				language, source, source_ref, surface, gender, number, category
+				language, source, source_ref, surface, gender, number, category, phoneme_count
 			) VALUES (
 				${LANGUAGE}::aud.lang_code,
 				${SOURCE_MARKER},
@@ -92,7 +140,8 @@ export const seedE2eFixtures = async () => {
 				${entry.surface},
 				${entry.gender ?? null},
 				${entry.number ?? null},
-				${entry.category ?? null}
+				${entry.category ?? null},
+				${entry.phonemeCount ?? null}
 			)
 		`;
 	}

@@ -1,5 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
-import { cleanupE2eFixtures, NOUN_FP, seedE2eFixtures } from '../../../tests/e2e/seed';
+import {
+	cleanupE2eFixtures,
+	FIXTURE_PHONEME_COUNT,
+	NOUN_FP,
+	seedE2eFixtures
+} from '../../../tests/e2e/seed';
 
 const goToGenerate = async (page: Page) => {
 	await page.goto('/generate');
@@ -146,6 +151,8 @@ test.describe('/generate', () => {
 		await setSelect(page, '#pattern', 'noun');
 		await setSelect(page, '#gender', 'f');
 		await setSelect(page, '#grammNumber', 'p');
+		await setSelect(page, '#lengthUnit', 'phonemes');
+		await setNumber(page, '#length', String(FIXTURE_PHONEME_COUNT));
 		await setNumber(page, '#listCount', '1');
 		await setNumber(page, '#itemsPerList', '10');
 

@@ -2,8 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
 	webServer: {
-		command:
-			'pnpm exec vite build && pnpm exec wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173',
+		command: 'pnpm exec vite build && pnpm exec vite preview --port 4173',
 		env: {
 			CI: '1',
 			WRANGLER_SEND_METRICS: 'false'

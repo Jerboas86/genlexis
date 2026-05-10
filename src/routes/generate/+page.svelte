@@ -5,21 +5,37 @@
 	import { localizeHref } from '$lib/paraglide/runtime';
 	import { acceptedSummary, generate } from './data.remote';
 
+	const MAX_LISTS = 5;
+	const MAX_ITEMS_PER_LIST = 50;
+
 	const summaryQuery = acceptedSummary();
 	await summaryQuery;
-	const summary = $derived(summaryQuery.current!);
-	const sentences = $derived(generate.result?.sentences ?? []);
+	const canGenerate = $derived(summaryQuery.current?.canGenerate ?? true);
 
-	let copied = $state(false);
+	let pattern = $state<'det_noun' | 'noun'>('det_noun');
+	let detType = $state<'' | 'definite' | 'indefinite'>('');
+	let gender = $state<'' | 'm' | 'f'>('');
+	let grammNumber = $state<'' | 's' | 'p'>('');
+	let listCount = $state(1);
+	let itemsPerList = $state(10);
+
+	const result = $derived(generate.result);
+	const lists = $derived(result?.lists ?? []);
+	const requestedTotal = $derived(
+		result ? result.requestedLists * result.requestedItemsPerList : 0
+	);
+	const isPartial = $derived(!!result && result.totalItems < requestedTotal);
+
+	let copiedIndex = $state<number | null>(null);
 	let copyResetTimeout: ReturnType<typeof setTimeout> | undefined;
 
-	async function copySentences() {
-		const text = sentences.map((s) => s.sentence).join('\n');
+	async function copyList(index: number) {
+		const text = lists[index].map((s) => s.sentence).join('\n');
 		await navigator.clipboard.writeText(text);
-		copied = true;
+		copiedIndex = index;
 		clearTimeout(copyResetTimeout);
 		copyResetTimeout = setTimeout(() => {
-			copied = false;
+			copiedIndex = null;
 		}, 2000);
 	}
 </script>
@@ -33,34 +49,122 @@
 
 	<section class="page-header">
 		<h1>{m.generate_title()}</h1>
-		<p class="lede">{m.generate_instruction({ count: summary.requiredCount })}</p>
+		<p class="lede">{m.generate_instruction({ maxLists: MAX_LISTS })}</p>
 	</section>
 
 	<section class="panel" aria-live="polite">
-		<div class="status">
-			{#if !summary.canGenerate}
-				<p class="notice">{m.generate_disabled_body({ count: summary.requiredCount })}</p>
-			{:else if !sentences.length}
-				<p class="notice">{m.generate_ready_body()}</p>
+		{#if !canGenerate}
+			<p class="notice">{m.generate_disabled_body()}</p>
+		{/if}
+
+		<form
+			{...generate.enhance(async ({ submit }) => {
+				await submit();
+			})}
+			class="controls"
+		>
+			<div class="field">
+				<label for="pattern">{m.generate_pattern_label()}</label>
+				<select id="pattern" name="pattern" bind:value={pattern}>
+					<option value="det_noun">{m.generate_pattern_det_noun()}</option>
+					<option value="noun">{m.generate_pattern_noun()}</option>
+				</select>
+			</div>
+
+			{#if pattern === 'det_noun'}
+				<div class="field">
+					<label for="detType">{m.generate_det_type_label()}</label>
+					<select id="detType" name="detType" bind:value={detType}>
+						<option value="">{m.generate_det_type_any()}</option>
+						<option value="definite">{m.generate_det_type_definite()}</option>
+						<option value="indefinite">{m.generate_det_type_indefinite()}</option>
+					</select>
+				</div>
 			{/if}
 
-			<form {...generate}>
-				<button class="button-primary" type="submit" disabled={!summary.canGenerate}>
-					{sentences.length ? m.generate_refresh() : m.generate_button()}
-				</button>
-			</form>
-		</div>
+			<div class="field">
+				<label for="gender">{m.generate_gender_label()}</label>
+				<select id="gender" name="gender" bind:value={gender}>
+					<option value="">{m.generate_gender_any()}</option>
+					<option value="m">{m.generate_gender_masculine()}</option>
+					<option value="f">{m.generate_gender_feminine()}</option>
+				</select>
+			</div>
 
-		{#if summary.canGenerate && sentences.length}
-			<div class="results">
-				<ol>
-					{#each sentences as sentence (sentence.sentenceId)}
-						<li>{sentence.sentence}</li>
-					{/each}
-				</ol>
-				<button class="copy" type="button" onclick={copySentences} aria-live="polite">
-					{copied ? m.generate_copied() : m.generate_copy()}
+			<div class="field">
+				<label for="grammNumber">{m.generate_number_label()}</label>
+				<select id="grammNumber" name="grammNumber" bind:value={grammNumber}>
+					<option value="">{m.generate_number_any()}</option>
+					<option value="s">{m.generate_number_singular()}</option>
+					<option value="p">{m.generate_number_plural()}</option>
+				</select>
+			</div>
+
+			<div class="field">
+				<label for="listCount">{m.generate_list_count_label()}</label>
+				<input
+					id="listCount"
+					name="listCount"
+					type="number"
+					min="1"
+					max={MAX_LISTS}
+					bind:value={listCount}
+				/>
+			</div>
+
+			<div class="field">
+				<label for="itemsPerList">{m.generate_items_per_list_label()}</label>
+				<input
+					id="itemsPerList"
+					name="itemsPerList"
+					type="number"
+					min="1"
+					max={MAX_ITEMS_PER_LIST}
+					bind:value={itemsPerList}
+				/>
+			</div>
+
+			<div class="actions">
+				<button class="button-primary" type="submit" data-testid="submit" disabled={!canGenerate}>
+					{lists.length ? m.generate_refresh() : m.generate_button()}
 				</button>
+			</div>
+		</form>
+
+		{#if result && lists.length}
+			{#if isPartial}
+				<p class="notice partial">
+					{m.generate_partial_notice({
+						actual: result.totalItems,
+						requested: requestedTotal
+					})}
+				</p>
+			{/if}
+
+			<div class="lists" data-testid="lists">
+				{#each lists as list, listIndex (listIndex)}
+					<article class="list" data-testid="list">
+						<header class="list-header">
+							<h2>{m.generate_list_heading({ index: listIndex + 1 })}</h2>
+							<button
+								class="copy"
+								type="button"
+								onclick={() => copyList(listIndex)}
+								disabled={!list.length}
+								aria-live="polite"
+							>
+								{copiedIndex === listIndex ? m.generate_copied() : m.generate_copy()}
+							</button>
+						</header>
+						{#if list.length}
+							<ol>
+								{#each list as sentence (sentence.sentenceId)}
+									<li data-testid="list-item">{sentence.sentence}</li>
+								{/each}
+							</ol>
+						{/if}
+					</article>
+				{/each}
 			</div>
 		{/if}
 	</section>
@@ -85,6 +189,7 @@
 	}
 
 	h1,
+	h2,
 	p {
 		margin: 0;
 	}
@@ -115,16 +220,77 @@
 		box-shadow: var(--shadow-subtle);
 	}
 
-	.status {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
+	.controls {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 		gap: var(--space-md);
+		align-items: end;
 	}
 
-	.status form {
-		flex-shrink: 0;
-		margin-left: auto;
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xxs);
+	}
+
+	.field label {
+		color: var(--color-slate);
+		font-size: var(--font-size-body-sm);
+		font-weight: var(--font-weight-medium);
+	}
+
+	.field select,
+	.field input {
+		box-sizing: border-box;
+		height: var(--button-height);
+		padding: var(--space-xs) var(--space-sm);
+		color: var(--color-ink);
+		font-size: var(--font-size-body-sm);
+		line-height: 1.4;
+		background: var(--color-canvas);
+		border: 1px solid var(--color-hairline);
+		border-radius: var(--radius-md);
+	}
+
+	.field select {
+		appearance: base-select;
+	}
+
+	.field select::picker(select) {
+		appearance: base-select;
+		margin-top: var(--space-xxs);
+		padding: var(--space-xxs);
+		color: var(--color-ink);
+		font-size: var(--font-size-body-sm);
+		background: var(--color-canvas);
+		border: 1px solid var(--color-hairline);
+		border-radius: var(--radius-md);
+		box-shadow: var(--shadow-subtle);
+	}
+
+	.field select option {
+		padding: var(--space-xs) var(--space-sm);
+		color: var(--color-ink);
+		font-size: var(--font-size-body-sm);
+		background: var(--color-canvas);
+		border-radius: var(--radius-md);
+	}
+
+	.field select option:hover,
+	.field select option:focus {
+		background: var(--color-surface);
+		outline: none;
+	}
+
+	.field select option:checked {
+		color: var(--color-on-primary);
+		background: var(--color-primary);
+	}
+
+	.actions {
+		grid-column: 1 / -1;
+		display: flex;
+		justify-content: flex-end;
 	}
 
 	button {
@@ -147,15 +313,33 @@
 		background: var(--color-charcoal);
 	}
 
-	.results {
-		position: relative;
+	.lists {
+		display: grid;
+		gap: var(--space-xl);
 		margin-top: var(--space-xl);
 	}
 
+	.list {
+		padding: var(--space-md) var(--space-lg);
+		background: var(--color-canvas);
+		border: 1px solid var(--color-hairline);
+		border-radius: var(--card-radius);
+	}
+
+	.list-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-md);
+		margin-bottom: var(--space-sm);
+	}
+
+	.list-header h2 {
+		font-size: var(--font-size-body-md);
+		font-weight: var(--font-weight-semibold);
+	}
+
 	.copy {
-		position: absolute;
-		top: 0;
-		right: 0;
 		min-height: 0;
 		padding: var(--space-xxs) var(--space-xs);
 		color: var(--color-slate);
@@ -179,15 +363,20 @@
 	}
 
 	.notice {
-		margin: 0;
+		margin: 0 0 var(--space-md);
 		color: var(--color-slate);
 		font-size: var(--font-size-body-md);
 		line-height: var(--line-height-body);
 	}
 
+	.partial {
+		margin-top: var(--space-md);
+		margin-bottom: 0;
+	}
+
 	ol {
 		display: grid;
-		gap: var(--space-md);
+		gap: var(--space-xs);
 		margin: 0;
 		padding-left: var(--space-xl);
 	}
@@ -217,22 +406,16 @@
 			padding: var(--space-xl);
 		}
 
-		.status {
-			align-items: stretch;
-			flex-direction: column;
+		.controls {
+			grid-template-columns: 1fr;
 		}
 
-		.status form {
-			margin-left: 0;
+		.actions {
+			justify-content: stretch;
 		}
 
-		.status > form,
-		.status > .button-primary {
+		.actions .button-primary {
 			width: 100%;
-		}
-
-		ol {
-			padding-top: var(--space-xl);
 		}
 	}
 </style>

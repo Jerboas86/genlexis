@@ -9,7 +9,7 @@
 		"dev": "doppler run -p genlexis -c dev -- vite dev",
 		"build": "doppler run -p genlexis -c prod -- vite build",
 		"deploy": "wrangler deploy",
-		"preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
+		"preview": "vite preview",
 		"prepare": "playwright install && pnpm gen && svelte-kit sync || echo '' && husky",
 		"check": "doppler run -p genlexis -c dev -- svelte-kit sync && pnpm generated:postprocess && svelte-check --tsconfig ./tsconfig.json",
 		"lint": "prettier --check . && eslint .",
@@ -31,10 +31,9 @@
 		"db:migrate:prod": "doppler run -p genlexis -c prod -- pnpm db:migrate",
 		"db:studio": "drizzle-kit studio",
 		"db:studio:dev": "doppler run -p genlexis -c dev -- pnpm db:studio",
-		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes"
+		"auth:schema": "pnpm dlx @better-auth/cli@latest generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes"
 	},
 	"devDependencies": {
-		"@better-auth/cli": "~1.4.21",
 		"@eslint/compat": "^2.0.5",
 		"@eslint/js": "^10.0.1",
 		"@inlang/paraglide-js": "^2.18.0",

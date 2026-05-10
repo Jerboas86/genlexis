@@ -3,6 +3,8 @@ import {
 	generateAcceptedSentences,
 	getValidationCandidate,
 	recordValidation,
+	type AcceptedItem,
+	type FindAcceptedItemsOptions,
 	type GenlexisRepository
 } from './genlexis';
 
@@ -21,7 +23,7 @@ const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisReposit
 	findRandomValidationCandidate: vi.fn(async () => null),
 	recordValidation: vi.fn(async () => undefined),
 	countAcceptedSentences: vi.fn(async () => 0),
-	findRandomAcceptedSentences: vi.fn(async () => []),
+	findRandomAcceptedItems: vi.fn(async () => []),
 	...overrides
 });
 
@@ -81,38 +83,96 @@ describe('genlexis server helpers', () => {
 		expect(repository.recordValidation).toHaveBeenCalledWith(42, false);
 	});
 
-	it('does not generate until at least 10 accepted sentences exist', async () => {
+	it('forwards filter options to the repository and partitions results into N lists', async () => {
 		expect.assertions(3);
 
-		const repository = makeRepository({ countAcceptedSentences: vi.fn(async () => 9) });
+		const items: AcceptedItem[] = Array.from({ length: 6 }, (_, i) => ({
+			sentenceId: i + 1,
+			sentence: `S${i + 1}`,
+			pattern: 'det_noun',
+			dedupeKey: `n${i + 1}`
+		}));
+		const findRandomAcceptedItems = vi.fn(async () => items);
+		const repository = makeRepository({ findRandomAcceptedItems });
 
-		await expect(generateAcceptedSentences(repository)).resolves.toEqual({
-			acceptedCount: 9,
-			sentences: [],
-			canGenerate: false
-		});
-		expect(repository.countAcceptedSentences).toHaveBeenCalledOnce();
-		expect(repository.findRandomAcceptedSentences).not.toHaveBeenCalled();
+		const result = await generateAcceptedSentences(
+			{
+				pattern: 'det_noun',
+				detType: 'definite',
+				gender: 'f',
+				grammNumber: 'p',
+				listCount: 3,
+				itemsPerList: 2
+			},
+			repository
+		);
+
+		expect(findRandomAcceptedItems).toHaveBeenCalledWith({
+			pattern: 'det_noun',
+			detType: 'definite',
+			gender: 'f',
+			grammNumber: 'p',
+			limit: 6
+		} satisfies FindAcceptedItemsOptions);
+		expect(result.lists).toHaveLength(3);
+		expect(result.lists.map((list) => list.length)).toEqual([2, 2, 2]);
 	});
 
-	it('returns exactly 10 unique accepted sentences when enough exist', async () => {
-		expect.assertions(4);
+	it('enforces global noun uniqueness across all lists', async () => {
+		expect.assertions(2);
 
-		const sentences = Array.from({ length: 10 }, (_, index) => ({
-			sentenceId: index + 1,
-			sentence: `Phrase ${index + 1}.`,
-			pattern: 'pattern'
-		}));
-		const repository = makeRepository({
-			countAcceptedSentences: vi.fn(async () => 12),
-			findRandomAcceptedSentences: vi.fn(async () => sentences)
-		});
+		const items: AcceptedItem[] = [
+			{ sentenceId: 1, sentence: 'Le chat', pattern: 'det_noun', dedupeKey: 'chat' },
+			{ sentenceId: 2, sentence: 'Un chat', pattern: 'det_noun', dedupeKey: 'chat' },
+			{ sentenceId: 3, sentence: 'Le chien', pattern: 'det_noun', dedupeKey: 'chien' },
+			{ sentenceId: 4, sentence: 'La maison', pattern: 'det_noun', dedupeKey: 'maison' }
+		];
+		const repository = makeRepository({ findRandomAcceptedItems: vi.fn(async () => items) });
 
-		const result = await generateAcceptedSentences(repository);
+		const result = await generateAcceptedSentences(
+			{ pattern: 'det_noun', listCount: 2, itemsPerList: 2 },
+			repository
+		);
 
-		expect(result.canGenerate).toBe(true);
-		expect(result.sentences).toHaveLength(10);
-		expect(new Set(result.sentences.map((sentence) => sentence.sentenceId)).size).toBe(10);
-		expect(repository.findRandomAcceptedSentences).toHaveBeenCalledWith(10);
+		const flat = result.lists.flat();
+		expect(flat).toHaveLength(3);
+		expect(new Set(flat.map(({ sentence }) => sentence.split(' ').slice(-1)[0])).size).toBe(3);
+	});
+
+	it('best-effort partitions when fewer items match than requested', async () => {
+		expect.assertions(2);
+
+		const items: AcceptedItem[] = [
+			{ sentenceId: 1, sentence: 'Le chat', pattern: 'det_noun', dedupeKey: 'chat' },
+			{ sentenceId: 2, sentence: 'Le chien', pattern: 'det_noun', dedupeKey: 'chien' }
+		];
+		const repository = makeRepository({ findRandomAcceptedItems: vi.fn(async () => items) });
+
+		const result = await generateAcceptedSentences(
+			{ pattern: 'det_noun', listCount: 5, itemsPerList: 5 },
+			repository
+		);
+
+		expect(result.totalItems).toBe(2);
+		expect(result.lists.map((list) => list.length)).toEqual([1, 1, 0, 0, 0]);
+	});
+
+	it('clamps listCount to the [1, 5] range', async () => {
+		expect.assertions(2);
+
+		const findRandomAcceptedItems = vi.fn(async () => []);
+		const repository = makeRepository({ findRandomAcceptedItems });
+
+		const above = await generateAcceptedSentences(
+			{ pattern: 'noun', listCount: 99, itemsPerList: 3 },
+			repository
+		);
+		expect(above.requestedLists).toBe(5);
+
+		const below = await generateAcceptedSentences(
+			{ pattern: 'noun', listCount: 0, itemsPerList: 3 },
+			repository
+		);
+		expect(below.requestedLists).toBe(1);
 	});
 });

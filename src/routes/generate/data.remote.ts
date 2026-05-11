@@ -2,7 +2,9 @@ import { error } from '@sveltejs/kit';
 import { form, query } from '$app/server';
 import {
 	generateAcceptedSentences,
+	generateBalancedAcceptedSentences,
 	getAcceptedSentenceCount,
+	type BalancedGenerateResult,
 	type DetType,
 	type GenerateResult,
 	type Gender,
@@ -55,6 +57,13 @@ const parseEnum = <T extends string>(value: unknown, allowed: T[]): T | undefine
 	return (allowed as string[]).includes(value) ? (value as T) : undefined;
 };
 
+const LANGUAGE_RE = /^[a-z]{2}-[A-Z]{2}$/;
+
+const parseLanguage = (value: unknown): string | undefined => {
+	if (typeof value !== 'string' || !LANGUAGE_RE.test(value)) return undefined;
+	return value;
+};
+
 export const generate = form(
 	'unchecked',
 	async (data: Record<string, unknown>): Promise<GenerateResult> => {
@@ -82,5 +91,46 @@ export const generate = form(
 			listCount,
 			itemsPerList
 		});
+	}
+);
+
+export const generateBalanced = form(
+	'unchecked',
+	async (data: Record<string, unknown>): Promise<BalancedGenerateResult> => {
+		const language = parseLanguage(data.language);
+		if (!language) error(400, 'Invalid language');
+
+		const pattern = parseEnum<SupportedPattern>(data.pattern, SUPPORTED_PATTERNS);
+		if (!pattern) error(400, 'Invalid pattern');
+
+		const detType =
+			pattern === 'det_noun' ? parseEnum<DetType>(data.detType, DET_TYPES) : undefined;
+		const gender = parseEnum<Gender>(data.gender, GENDERS);
+		const grammNumber = parseEnum<GrammNumber>(data.grammNumber, GRAMM_NUMBERS);
+		const lengthUnit = parseEnum<LengthUnit>(data.lengthUnit, LENGTH_UNITS) ?? 'syllables';
+		const length = parseOptionalInteger(data.length, 1, MAX_NOUN_LENGTH);
+		const lexicalDensity = parseEnum<LexicalDensity>(data.lexicalDensity, LEXICAL_DENSITIES);
+		const listCount = parseInteger(data.listCount, 1, MAX_LISTS, 1);
+		const itemsPerList = parseInteger(data.itemsPerList, 1, MAX_ITEMS_PER_LIST, 10);
+
+		try {
+			return await generateBalancedAcceptedSentences({
+				language,
+				pattern,
+				detType,
+				gender,
+				grammNumber,
+				lengthUnit: length !== undefined ? lengthUnit : undefined,
+				length,
+				lexicalDensity,
+				listCount,
+				itemsPerList
+			});
+		} catch (err) {
+			if (err instanceof Error && err.message.startsWith('No phoneme distribution')) {
+				error(422, err.message);
+			}
+			throw err;
+		}
 	}
 );

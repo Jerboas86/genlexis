@@ -3,11 +3,13 @@
 	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 	import { localizeHref } from '$lib/paraglide/runtime';
-	import { acceptedSummary, generate } from './data.remote';
+	import { acceptedSummary, generate, generateBalanced } from './data.remote';
 
 	const MAX_LISTS = 5;
 	const MAX_ITEMS_PER_LIST = 50;
 	const MAX_NOUN_LENGTH = 20;
+	const UNBALANCED_THRESHOLD = 0.35;
+	const DEFAULT_LANGUAGE = 'fr-FR';
 
 	const summaryQuery = acceptedSummary();
 	await summaryQuery;
@@ -22,13 +24,20 @@
 	let lexicalDensity = $state<'' | 'high' | 'medium' | 'low'>('');
 	let listCount = $state(1);
 	let itemsPerList = $state(10);
+	let balanced = $state(false);
 
-	const result = $derived(generate.result);
+	const activeForm = $derived(balanced ? generateBalanced : generate);
+	const balancedResult = $derived(generateBalanced.result);
+	const result = $derived(balanced ? balancedResult : generate.result);
 	const lists = $derived(result?.lists ?? []);
 	const requestedTotal = $derived(
 		result ? result.requestedLists * result.requestedItemsPerList : 0
 	);
 	const isPartial = $derived(!!result && result.totalItems < requestedTotal);
+	const scores = $derived(balanced && balancedResult ? balancedResult.scores : null);
+	const showUnbalancedWarning = $derived(
+		!!scores && scores.length > 0 && scores.some((s) => s > UNBALANCED_THRESHOLD)
+	);
 
 	let copiedIndex = $state<number | null>(null);
 	let copyResetTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -62,11 +71,13 @@
 		{/if}
 
 		<form
-			{...generate.enhance(async ({ submit }) => {
+			{...activeForm.enhance(async ({ submit }) => {
 				await submit();
 			})}
 			class="controls"
 		>
+			<input type="hidden" name="language" value={DEFAULT_LANGUAGE} />
+
 			<div class="field">
 				<label for="pattern">{m.generate_pattern_label()}</label>
 				<select id="pattern" name="pattern" bind:value={pattern}>
@@ -163,6 +174,14 @@
 				/>
 			</div>
 
+			<label class="toggle">
+				<input type="checkbox" bind:checked={balanced} data-testid="balance-toggle" />
+				<span class="toggle-text">
+					<span class="toggle-label">{m.generate_balance_label()}</span>
+					<span class="toggle-help">{m.generate_balance_help()}</span>
+				</span>
+			</label>
+
 			<div class="actions">
 				<button class="button-primary" type="submit" data-testid="submit" disabled={!canGenerate}>
 					{lists.length ? m.generate_refresh() : m.generate_button()}
@@ -180,20 +199,35 @@
 				</p>
 			{/if}
 
+			{#if showUnbalancedWarning}
+				<p class="notice unbalanced" role="status" data-testid="unbalanced-warning">
+					{m.generate_unbalanced_warning()}
+				</p>
+			{/if}
+
 			<div class="lists" data-testid="lists">
 				{#each lists as list, listIndex (listIndex)}
+					{@const listScore = scores ? scores[listIndex] : undefined}
+					{@const listUnbalanced = listScore !== undefined && listScore > UNBALANCED_THRESHOLD}
 					<article class="list" data-testid="list">
 						<header class="list-header">
 							<h2>{m.generate_list_heading({ index: listIndex + 1 })}</h2>
-							<button
-								class="copy"
-								type="button"
-								onclick={() => copyList(listIndex)}
-								disabled={!list.length}
-								aria-live="polite"
-							>
-								{copiedIndex === listIndex ? m.generate_copied() : m.generate_copy()}
-							</button>
+							<div class="list-meta">
+								{#if listScore !== undefined}
+									<span class="score" class:warn={listUnbalanced} data-testid="list-score">
+										{m.generate_score_label({ score: listScore.toFixed(2) })}
+									</span>
+								{/if}
+								<button
+									class="copy"
+									type="button"
+									onclick={() => copyList(listIndex)}
+									disabled={!list.length}
+									aria-live="polite"
+								>
+									{copiedIndex === listIndex ? m.generate_copied() : m.generate_copy()}
+								</button>
+							</div>
 						</header>
 						{#if list.length}
 							<ol>
@@ -430,6 +464,76 @@
 	.partial {
 		margin-top: var(--space-md);
 		margin-bottom: 0;
+	}
+
+	.unbalanced {
+		margin-top: var(--space-md);
+		margin-bottom: 0;
+		padding: var(--space-sm) var(--space-md);
+		color: var(--color-ink);
+		background: color-mix(in oklab, var(--color-warning, #f5a623) 18%, var(--color-canvas));
+		border: 1px solid color-mix(in oklab, var(--color-warning, #f5a623) 50%, transparent);
+		border-radius: var(--radius-md);
+		font-size: var(--font-size-body-sm);
+	}
+
+	.toggle {
+		grid-column: 1 / -1;
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-sm);
+		padding: var(--space-sm) var(--space-md);
+		background: var(--color-surface);
+		border: 1px solid var(--color-hairline);
+		border-radius: var(--radius-md);
+		cursor: pointer;
+	}
+
+	.toggle input[type='checkbox'] {
+		margin-top: calc(var(--space-xxs) / 2);
+		width: var(--space-md);
+		height: var(--space-md);
+		flex: 0 0 auto;
+		cursor: pointer;
+	}
+
+	.toggle-text {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xxs);
+	}
+
+	.toggle-label {
+		color: var(--color-ink);
+		font-size: var(--font-size-body-sm);
+		font-weight: var(--font-weight-semibold);
+	}
+
+	.toggle-help {
+		color: var(--color-slate);
+		font-size: var(--font-size-body-sm);
+	}
+
+	.list-meta {
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+	}
+
+	.score {
+		padding: var(--space-xxs) var(--space-xs);
+		color: var(--color-slate);
+		font-size: var(--font-size-body-sm);
+		font-weight: var(--font-weight-medium);
+		background: var(--color-surface);
+		border: 1px solid var(--color-hairline);
+		border-radius: var(--radius-sm, var(--radius-md));
+	}
+
+	.score.warn {
+		color: var(--color-ink);
+		background: color-mix(in oklab, var(--color-warning, #f5a623) 25%, var(--color-canvas));
+		border-color: color-mix(in oklab, var(--color-warning, #f5a623) 55%, transparent);
 	}
 
 	ol {

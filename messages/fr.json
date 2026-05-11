@@ -59,5 +59,9 @@
 	"generate_list_count_label": "Nombre de listes",
 	"generate_items_per_list_label": "Éléments par liste",
 	"generate_list_heading": "Liste {index}",
-	"generate_partial_notice": "Seuls {actual} éléments sur les {requested} demandés correspondent à vos filtres."
+	"generate_partial_notice": "Seuls {actual} éléments sur les {requested} demandés correspondent à vos filtres.",
+	"generate_balance_label": "Équilibrer par phonèmes",
+	"generate_balance_help": "Sélectionne les mots pour approcher la distribution phonémique du français dans chaque liste.",
+	"generate_score_label": "Score : {score}",
+	"generate_unbalanced_warning": "Certaines listes s'écartent notablement de la distribution phonémique cible. Augmentez le nombre d'éléments par liste pour un meilleur ajustement."
 }

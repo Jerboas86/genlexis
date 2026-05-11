@@ -59,5 +59,9 @@
 	"generate_list_count_label": "Number of lists",
 	"generate_items_per_list_label": "Items per list",
 	"generate_list_heading": "List {index}",
-	"generate_partial_notice": "Only {actual} of the {requested} requested items matched your filters."
+	"generate_partial_notice": "Only {actual} of the {requested} requested items matched your filters.",
+	"generate_balance_label": "Balance by phonemes",
+	"generate_balance_help": "Pick words so each list approximates the French phoneme distribution.",
+	"generate_score_label": "Score: {score}",
+	"generate_unbalanced_warning": "Some lists deviate notably from the target phoneme distribution. Try increasing the items per list for a closer match."
 }

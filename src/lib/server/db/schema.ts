@@ -143,6 +143,22 @@ export const generatedSentenceValidations = aud.table(
 	]
 );
 
+export const languagePhonemeDistributions = aud.table(
+	'language_phoneme_distributions',
+	{
+		language: langCode('language').notNull(),
+		phoneme: text('phoneme').notNull(),
+		frequency: numeric('frequency').notNull()
+	},
+	(t) => [
+		primaryKey({ columns: [t.language, t.phoneme] }),
+		check(
+			'language_phoneme_distributions_frequency_range',
+			sql`${t.frequency} >= 0 AND ${t.frequency} <= 1`
+		)
+	]
+);
+
 export const generatedSentenceValidationSummaries = aud.view(
 	'generated_sentence_validation_summaries',
 	{

@@ -24,6 +24,8 @@ const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisReposit
 	recordValidation: vi.fn(async () => undefined),
 	countAcceptedSentences: vi.fn(async () => 0),
 	findRandomAcceptedItems: vi.fn(async () => []),
+	findAcceptedItemsWithIpa: vi.fn(async () => []),
+	getPhonemeDistribution: vi.fn(async () => ({})),
 	...overrides
 });
 

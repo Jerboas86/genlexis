@@ -20,7 +20,7 @@ vi.mock('$lib/server/db/schema', () => ({
 }));
 
 const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisRepository => ({
-	findRandomValidationCandidate: vi.fn(async () => null),
+	findLeastVotedValidationCandidate: vi.fn(async () => null),
 	recordValidation: vi.fn(async () => undefined),
 	countAcceptedSentences: vi.fn(async () => 0),
 	findRandomAcceptedItems: vi.fn(async () => []),
@@ -30,8 +30,8 @@ const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisReposit
 });
 
 describe('genlexis server helpers', () => {
-	it('selects an unreviewed validation candidate before needs_more_votes', async () => {
-		expect.assertions(3);
+	it('delegates to the least-voted validation candidate lookup', async () => {
+		expect.assertions(2);
 
 		const candidate = {
 			sentenceId: 1,
@@ -43,36 +43,30 @@ describe('genlexis server helpers', () => {
 			validationStatus: 'unreviewed' as const
 		};
 		const repository = makeRepository({
-			findRandomValidationCandidate: vi.fn(async (status) =>
-				status === 'unreviewed' ? candidate : null
-			)
+			findLeastVotedValidationCandidate: vi.fn(async () => candidate)
 		});
 
 		await expect(getValidationCandidate(repository)).resolves.toEqual(candidate);
-		expect(repository.findRandomValidationCandidate).toHaveBeenCalledWith('unreviewed');
-		expect(repository.findRandomValidationCandidate).not.toHaveBeenCalledWith('needs_more_votes');
+		expect(repository.findLeastVotedValidationCandidate).toHaveBeenCalledOnce();
 	});
 
-	it('falls back to a sentence that needs more votes', async () => {
-		expect.assertions(2);
+	it('returns an already-accepted candidate when only accepted/rejected remain', async () => {
+		expect.assertions(1);
 
 		const candidate = {
-			sentenceId: 2,
+			sentenceId: 9,
 			sentence: 'La maison tombe.',
 			pattern: 'det noun verb',
-			voteCount: 1,
-			correctCount: 1,
+			voteCount: 3,
+			correctCount: 3,
 			incorrectCount: 0,
-			validationStatus: 'needs_more_votes' as const
+			validationStatus: 'accepted' as const
 		};
 		const repository = makeRepository({
-			findRandomValidationCandidate: vi.fn(async (status) =>
-				status === 'needs_more_votes' ? candidate : null
-			)
+			findLeastVotedValidationCandidate: vi.fn(async () => candidate)
 		});
 
 		await expect(getValidationCandidate(repository)).resolves.toEqual(candidate);
-		expect(repository.findRandomValidationCandidate).toHaveBeenNthCalledWith(2, 'needs_more_votes');
 	});
 
 	it('records a validation vote', async () => {

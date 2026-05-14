@@ -86,9 +86,7 @@ export type BalancedGenerateResult = GenerateResult & {
 };
 
 export type GenlexisRepository = {
-	findRandomValidationCandidate: (
-		status: 'unreviewed' | 'needs_more_votes'
-	) => Promise<SentenceSummary | null>;
+	findLeastVotedValidationCandidate: () => Promise<SentenceSummary | null>;
 	recordValidation: (sentenceId: number, isCorrect: boolean) => Promise<void>;
 	countAcceptedSentences: () => Promise<number>;
 	findRandomAcceptedItems: (options: FindAcceptedItemsOptions) => Promise<AcceptedItem[]>;
@@ -109,7 +107,7 @@ const detSetFor = (type: DetType | undefined) =>
 	type === 'definite' ? DEFINITE_DETS : type === 'indefinite' ? INDEFINITE_DETS : null;
 
 export const databaseGenlexisRepository: GenlexisRepository = {
-	async findRandomValidationCandidate(status) {
+	async findLeastVotedValidationCandidate() {
 		const result = await db.execute<SentenceSummary>(sql`
 			SELECT
 				sentence_id::int AS "sentenceId",
@@ -120,8 +118,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 				incorrect_count::int AS "incorrectCount",
 				validation_status AS "validationStatus"
 			FROM aud.generated_sentence_validation_summaries
-			WHERE validation_status = ${status}
-			ORDER BY random()
+			ORDER BY vote_count ASC, random()
 			LIMIT 1
 		`);
 
@@ -318,11 +315,9 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 	}
 };
 
-export const getValidationCandidate = async (
+export const getValidationCandidate = (
 	repository: GenlexisRepository = databaseGenlexisRepository
-) =>
-	(await repository.findRandomValidationCandidate('unreviewed')) ??
-	(await repository.findRandomValidationCandidate('needs_more_votes'));
+) => repository.findLeastVotedValidationCandidate();
 
 export const recordValidation = async (
 	sentenceId: number,

@@ -16,10 +16,10 @@
 	</section>
 
 	<nav aria-label={m.home_navigation_label()} class="actions">
-		<a class="product-card coral" href={resolve(localizeHref('/validate') as Pathname)}>
+		<a class="product-card coral" href={resolve(localizeHref('/classify') as Pathname)}>
 			<small>01</small>
-			<strong>{m.validate_title()}</strong>
-			<span>{m.home_validate_description()}</span>
+			<strong>{m.classify_title()}</strong>
+			<span>{m.home_classify_description()}</span>
 		</a>
 		<a class="product-card blue" href={resolve(localizeHref('/generate') as Pathname)}>
 			<small>02</small>

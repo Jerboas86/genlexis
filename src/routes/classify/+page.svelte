@@ -12,41 +12,41 @@
 </script>
 
 <svelte:head>
-	<title>{m.validate_meta_title()}</title>
+	<title>{m.classify_meta_title()}</title>
 </svelte:head>
 
 <main class="shell">
 	<a class="back" href={resolve(localizeHref('/') as Pathname)}>{m.back_home()}</a>
 
 	<section class="page-header">
-		<h1>{m.validate_title()}</h1>
-		<p class="lede">{m.validate_instruction()}</p>
+		<h1>{m.classify_title()}</h1>
+		<p class="lede">{m.classify_instruction()}</p>
 	</section>
 
 	{#if query.current}
 		<article class="candidate" aria-labelledby="candidate-heading">
-			<h2 id="candidate-heading">{m.validate_candidate_label()}</h2>
+			<h2 id="candidate-heading">{m.classify_candidate_label()}</h2>
 			<p class="sentence">{query.current.sentence}</p>
-			<p class="meta">{m.validate_vote_count({ count: query.current.voteCount })}</p>
+			<p class="meta">{m.classify_vote_count({ count: query.current.voteCount })}</p>
 		</article>
 
-		<div class="vote-actions" aria-label={m.validate_actions_label()}>
+		<div class="vote-actions" aria-label={m.classify_actions_label()}>
 			<form {...incorrect}>
 				<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
 				<button class="vote-button vote-button-incorrect" type="submit">
-					{m.validate_incorrect()}
+					{m.classify_incorrect()}
 				</button>
 			</form>
 			<form {...correct}>
 				<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
-				<button class="vote-button vote-button-correct" type="submit">{m.validate_correct()}</button
+				<button class="vote-button vote-button-correct" type="submit">{m.classify_correct()}</button
 				>
 			</form>
 		</div>
 	{:else}
 		<section class="empty">
-			<h2>{m.validate_empty_title()}</h2>
-			<p>{m.validate_empty_body()}</p>
+			<h2>{m.classify_empty_title()}</h2>
+			<p>{m.classify_empty_body()}</p>
 		</section>
 	{/if}
 </main>

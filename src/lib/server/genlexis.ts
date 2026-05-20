@@ -24,7 +24,7 @@ export type AcceptedSentence = Pick<SentenceSummary, 'sentenceId' | 'sentence' |
 
 export type AcceptedItem = AcceptedSentence & { dedupeKey: string };
 
-export type SupportedPattern = 'det_noun' | 'noun';
+export type SupportedPattern = 'det_noun' | 'noun' | 'det_noun_adj';
 export type DetType = 'definite' | 'indefinite';
 export type Gender = 'm' | 'f';
 export type GrammNumber = 's' | 'p';
@@ -147,22 +147,35 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		lexicalDensity,
 		limit
 	}) {
-		const detJoin: SQL =
-			pattern === 'det_noun'
-				? sql`JOIN aud.generated_sentence_tokens det_token
+		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj';
+		const hasAdj = pattern === 'det_noun_adj';
+
+		const detJoin: SQL = hasDet
+			? sql`JOIN aud.generated_sentence_tokens det_token
 					ON det_token.sentence_id = s.sentence_id
 					AND det_token.language = s.language
 					AND det_token.slot = 'det'`
-				: sql``;
+			: sql``;
+
+		const adjJoin: SQL = hasAdj
+			? sql`JOIN aud.generated_sentence_tokens adj_token
+					ON adj_token.sentence_id = s.sentence_id
+					AND adj_token.language = s.language
+					AND adj_token.slot = 'adj'`
+			: sql``;
 
 		const detSet = detSetFor(detType);
 		const detFilter: SQL =
-			pattern === 'det_noun' && detSet
+			hasDet && detSet
 				? sql`AND LOWER(det_token.surface) IN (${sql.join(
 						detSet.map((d) => sql`${d}`),
 						sql`, `
 					)})`
 				: sql``;
+
+		const dedupeExpr: SQL = hasAdj
+			? sql`LOWER(noun_token.surface || ' ' || adj_token.surface)`
+			: sql`LOWER(noun_token.surface)`;
 
 		const genderFilter: SQL = gender ? sql`AND noun_le.gender = ${gender}` : sql``;
 		const numberFilter: SQL = grammNumber ? sql`AND noun_le.number = ${grammNumber}` : sql``;
@@ -184,11 +197,11 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 
 		const result = await db.execute<AcceptedItem>(sql`
 			WITH candidates AS (
-				SELECT DISTINCT ON (LOWER(noun_token.surface))
+				SELECT DISTINCT ON (${dedupeExpr})
 					s.sentence_id::int AS "sentenceId",
 					s.sentence,
 					s.pattern,
-					LOWER(noun_token.surface) AS "dedupeKey"
+					${dedupeExpr} AS "dedupeKey"
 				FROM aud.sentence_acceptance s
 				JOIN aud.generated_sentence_tokens noun_token
 					ON noun_token.sentence_id = s.sentence_id
@@ -198,6 +211,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					ON noun_le.id = noun_token.lexical_entry_id
 					AND noun_le.language = noun_token.language
 				${detJoin}
+				${adjJoin}
 				WHERE s.accepted = TRUE
 					AND s.pattern = ${pattern}
 					${genderFilter}
@@ -205,7 +219,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					${lengthFilter}
 					${lexicalDensityFilter}
 					${detFilter}
-				ORDER BY LOWER(noun_token.surface), random()
+				ORDER BY ${dedupeExpr}, random()
 			)
 			SELECT "sentenceId", sentence, pattern, "dedupeKey"
 			FROM candidates
@@ -227,22 +241,35 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		lexicalDensity,
 		poolSize
 	}) {
-		const detJoin: SQL =
-			pattern === 'det_noun'
-				? sql`JOIN aud.generated_sentence_tokens det_token
+		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj';
+		const hasAdj = pattern === 'det_noun_adj';
+
+		const detJoin: SQL = hasDet
+			? sql`JOIN aud.generated_sentence_tokens det_token
 					ON det_token.sentence_id = s.sentence_id
 					AND det_token.language = s.language
 					AND det_token.slot = 'det'`
-				: sql``;
+			: sql``;
+
+		const adjJoin: SQL = hasAdj
+			? sql`JOIN aud.generated_sentence_tokens adj_token
+					ON adj_token.sentence_id = s.sentence_id
+					AND adj_token.language = s.language
+					AND adj_token.slot = 'adj'`
+			: sql``;
 
 		const detSet = detSetFor(detType);
 		const detFilter: SQL =
-			pattern === 'det_noun' && detSet
+			hasDet && detSet
 				? sql`AND LOWER(det_token.surface) IN (${sql.join(
 						detSet.map((d) => sql`${d}`),
 						sql`, `
 					)})`
 				: sql``;
+
+		const dedupeExpr: SQL = hasAdj
+			? sql`LOWER(noun_token.surface || ' ' || adj_token.surface)`
+			: sql`LOWER(noun_token.surface)`;
 
 		const genderFilter: SQL = gender ? sql`AND noun_le.gender = ${gender}` : sql``;
 		const numberFilter: SQL = grammNumber ? sql`AND noun_le.number = ${grammNumber}` : sql``;
@@ -264,11 +291,11 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 
 		const result = await db.execute<AcceptedItemWithIpa>(sql`
 			WITH candidates AS (
-				SELECT DISTINCT ON (LOWER(noun_token.surface))
+				SELECT DISTINCT ON (${dedupeExpr})
 					s.sentence_id::int AS "sentenceId",
 					s.sentence,
 					s.pattern,
-					LOWER(noun_token.surface) AS "dedupeKey",
+					${dedupeExpr} AS "dedupeKey",
 					noun_le.phono_ipa AS "phonoIpa"
 				FROM aud.sentence_acceptance s
 				JOIN aud.generated_sentence_tokens noun_token
@@ -279,6 +306,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					ON noun_le.id = noun_token.lexical_entry_id
 					AND noun_le.language = noun_token.language
 				${detJoin}
+				${adjJoin}
 				WHERE s.accepted = TRUE
 					AND s.language = ${language}
 					AND s.pattern = ${pattern}
@@ -289,7 +317,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					${lengthFilter}
 					${lexicalDensityFilter}
 					${detFilter}
-				ORDER BY LOWER(noun_token.surface), random()
+				ORDER BY ${dedupeExpr}, random()
 			)
 			SELECT "sentenceId", sentence, pattern, "dedupeKey", "phonoIpa"
 			FROM candidates

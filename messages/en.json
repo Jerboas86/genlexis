@@ -33,6 +33,7 @@
 	"generate_pattern_label": "Pattern",
 	"generate_pattern_det_noun": "Determiner + noun",
 	"generate_pattern_noun": "Noun",
+	"generate_pattern_det_noun_adj": "Determiner + noun + adjective",
 	"generate_det_type_label": "Determiner type",
 	"generate_det_type_any": "Any",
 	"generate_det_type_definite": "Definite",

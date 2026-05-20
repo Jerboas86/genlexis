@@ -33,6 +33,7 @@
 	"generate_pattern_label": "Motif",
 	"generate_pattern_det_noun": "Déterminant + nom",
 	"generate_pattern_noun": "Nom",
+	"generate_pattern_det_noun_adj": "Déterminant + nom + adjectif",
 	"generate_det_type_label": "Type de déterminant",
 	"generate_det_type_any": "Indifférent",
 	"generate_det_type_definite": "Défini",

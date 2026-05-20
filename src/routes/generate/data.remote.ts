@@ -19,7 +19,10 @@ const MAX_LISTS = 5;
 const MAX_ITEMS_PER_LIST = 50;
 const MAX_NOUN_LENGTH = 20;
 
-const SUPPORTED_PATTERNS: SupportedPattern[] = ['det_noun', 'noun'];
+const SUPPORTED_PATTERNS: SupportedPattern[] = ['det_noun', 'noun', 'det_noun_adj'];
+
+const patternHasDet = (pattern: SupportedPattern) =>
+	pattern === 'det_noun' || pattern === 'det_noun_adj';
 const DET_TYPES: DetType[] = ['definite', 'indefinite'];
 const GENDERS: Gender[] = ['m', 'f'];
 const GRAMM_NUMBERS: GrammNumber[] = ['s', 'p'];
@@ -70,8 +73,9 @@ export const generate = form(
 		const pattern = parseEnum<SupportedPattern>(data.pattern, SUPPORTED_PATTERNS);
 		if (!pattern) error(400, 'Invalid pattern');
 
-		const detType =
-			pattern === 'det_noun' ? parseEnum<DetType>(data.detType, DET_TYPES) : undefined;
+		const detType = patternHasDet(pattern)
+			? parseEnum<DetType>(data.detType, DET_TYPES)
+			: undefined;
 		const gender = parseEnum<Gender>(data.gender, GENDERS);
 		const grammNumber = parseEnum<GrammNumber>(data.grammNumber, GRAMM_NUMBERS);
 		const lengthUnit = parseEnum<LengthUnit>(data.lengthUnit, LENGTH_UNITS) ?? 'syllables';
@@ -103,8 +107,9 @@ export const generateBalanced = form(
 		const pattern = parseEnum<SupportedPattern>(data.pattern, SUPPORTED_PATTERNS);
 		if (!pattern) error(400, 'Invalid pattern');
 
-		const detType =
-			pattern === 'det_noun' ? parseEnum<DetType>(data.detType, DET_TYPES) : undefined;
+		const detType = patternHasDet(pattern)
+			? parseEnum<DetType>(data.detType, DET_TYPES)
+			: undefined;
 		const gender = parseEnum<Gender>(data.gender, GENDERS);
 		const grammNumber = parseEnum<GrammNumber>(data.grammNumber, GRAMM_NUMBERS);
 		const lengthUnit = parseEnum<LengthUnit>(data.lengthUnit, LENGTH_UNITS) ?? 'syllables';

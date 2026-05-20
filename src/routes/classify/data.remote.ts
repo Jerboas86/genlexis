@@ -56,9 +56,7 @@ const parseBoolean = (value: unknown): boolean | null => {
 
 const parseSemantics = (value: unknown): SemanticsLabel | null => {
 	if (typeof value !== 'string') return null;
-	return (SEMANTICS_LABELS as readonly string[]).includes(value)
-		? (value as SemanticsLabel)
-		: null;
+	return (SEMANTICS_LABELS as readonly string[]).includes(value) ? (value as SemanticsLabel) : null;
 };
 
 export const classify = form('unchecked', async (data: Record<string, unknown>) => {

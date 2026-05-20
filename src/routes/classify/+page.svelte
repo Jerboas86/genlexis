@@ -19,13 +19,15 @@
 	const query = $derived(candidate(filter));
 	// Await once so the value is available during SSR/hydration; subsequent updates
 	// are read reactively via `query.current`.
-	await query;
+	const initialQuery = () => query;
+	await initialQuery();
 
 	const setFilter = async (next: PatternFilter) => {
 		const url = new URL(page.url);
 		if (next === ANY_PATTERN) url.searchParams.delete('pattern');
 		else url.searchParams.set('pattern', next);
-		await goto(url, { keepFocus: true, noScroll: true, replaceState: false });
+		const href = `${url.pathname}${url.search}${url.hash}` as Pathname;
+		await goto(resolve(href), { keepFocus: true, noScroll: true, replaceState: false });
 	};
 
 	const filterLabel = (value: PatternFilter) =>
@@ -214,7 +216,8 @@
 				<form {...correct}>
 					<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
 					<input type="hidden" name="filter" value={filter} />
-					<button class="vote-button vote-button-correct" type="submit">{m.classify_correct()}</button
+					<button class="vote-button vote-button-correct" type="submit"
+						>{m.classify_correct()}</button
 					>
 				</form>
 			</div>

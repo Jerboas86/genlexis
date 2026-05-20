@@ -102,10 +102,7 @@ export type GenlexisRepository = {
 		pattern?: SupportedPattern
 	) => Promise<SentenceSummary | null>;
 	recordValidation: (sentenceId: number, isCorrect: boolean) => Promise<void>;
-	recordHumanClassification: (
-		sentenceId: number,
-		input: HumanClassificationInput
-	) => Promise<void>;
+	recordHumanClassification: (sentenceId: number, input: HumanClassificationInput) => Promise<void>;
 	countAcceptedSentences: () => Promise<number>;
 	findRandomAcceptedItems: (options: FindAcceptedItemsOptions) => Promise<AcceptedItem[]>;
 	findAcceptedItemsWithIpa: (
@@ -407,11 +404,7 @@ export const getValidationCandidate = (
 	repository: GenlexisRepository = databaseGenlexisRepository
 ) => repository.findLeastVotedValidationCandidate(pattern);
 
-export const SUPPORTED_PATTERNS: readonly SupportedPattern[] = [
-	'noun',
-	'det_noun',
-	'det_noun_adj'
-];
+export const SUPPORTED_PATTERNS: readonly SupportedPattern[] = ['noun', 'det_noun', 'det_noun_adj'];
 
 export const parseSupportedPattern = (value: unknown): SupportedPattern | undefined =>
 	typeof value === 'string' && (SUPPORTED_PATTERNS as readonly string[]).includes(value)

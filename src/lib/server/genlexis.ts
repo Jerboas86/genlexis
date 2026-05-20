@@ -1,6 +1,6 @@
 import { sql, type SQL } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { generatedSentenceValidations } from '$lib/server/db/schema';
+import { generatedSentenceClassifications } from '$lib/server/db/schema';
 import { selectBalancedLists } from './phonemes/balancer';
 import { tokensToCounts } from './phonemes/distribution';
 import { createIpaTokenizer } from './phonemes/tokenizer';
@@ -11,16 +11,13 @@ import type {
 	TokenizerOptions
 } from './phonemes/types';
 
-export type ValidationStatus = 'unreviewed' | 'needs_more_votes' | 'accepted' | 'rejected';
-
 export type SentenceSummary = {
 	sentenceId: number;
 	sentence: string;
 	pattern: string;
 	voteCount: number;
-	correctCount: number;
-	incorrectCount: number;
-	validationStatus: ValidationStatus;
+	overallAcceptableCount: number;
+	overallUnacceptableCount: number;
 };
 
 export type AcceptedSentence = Pick<SentenceSummary, 'sentenceId' | 'sentence' | 'pattern'>;
@@ -114,10 +111,9 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 				sentence,
 				pattern,
 				vote_count::int AS "voteCount",
-				correct_count::int AS "correctCount",
-				incorrect_count::int AS "incorrectCount",
-				validation_status AS "validationStatus"
-			FROM aud.generated_sentence_validation_summaries
+				overall_acceptable_count::int AS "overallAcceptableCount",
+				overall_unacceptable_count::int AS "overallUnacceptableCount"
+			FROM aud.human_classification_summaries
 			ORDER BY vote_count ASC, random()
 			LIMIT 1
 		`);
@@ -126,14 +122,16 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 	},
 
 	async recordValidation(sentenceId, isCorrect) {
-		await db.insert(generatedSentenceValidations).values({ sentenceId, isCorrect });
+		await db
+			.insert(generatedSentenceClassifications)
+			.values({ sentenceId, judgeType: 'human', overallAcceptable: isCorrect });
 	},
 
 	async countAcceptedSentences() {
 		const result = await db.execute<CountRow>(sql`
 			SELECT count(*)::int AS count
-			FROM aud.generated_sentence_validation_summaries
-			WHERE validation_status = 'accepted'
+			FROM aud.sentence_acceptance
+			WHERE accepted = TRUE
 		`);
 
 		return normalizeCount(result.rows[0]?.count ?? 0);
@@ -191,7 +189,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					s.sentence,
 					s.pattern,
 					LOWER(noun_token.surface) AS "dedupeKey"
-				FROM aud.generated_sentence_validation_summaries s
+				FROM aud.sentence_acceptance s
 				JOIN aud.generated_sentence_tokens noun_token
 					ON noun_token.sentence_id = s.sentence_id
 					AND noun_token.language = s.language
@@ -200,7 +198,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					ON noun_le.id = noun_token.lexical_entry_id
 					AND noun_le.language = noun_token.language
 				${detJoin}
-				WHERE s.validation_status = 'accepted'
+				WHERE s.accepted = TRUE
 					AND s.pattern = ${pattern}
 					${genderFilter}
 					${numberFilter}
@@ -272,7 +270,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					s.pattern,
 					LOWER(noun_token.surface) AS "dedupeKey",
 					noun_le.phono_ipa AS "phonoIpa"
-				FROM aud.generated_sentence_validation_summaries s
+				FROM aud.sentence_acceptance s
 				JOIN aud.generated_sentence_tokens noun_token
 					ON noun_token.sentence_id = s.sentence_id
 					AND noun_token.language = s.language
@@ -281,7 +279,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					ON noun_le.id = noun_token.lexical_entry_id
 					AND noun_le.language = noun_token.language
 				${detJoin}
-				WHERE s.validation_status = 'accepted'
+				WHERE s.accepted = TRUE
 					AND s.language = ${language}
 					AND s.pattern = ${pattern}
 					AND noun_le.phono_ipa IS NOT NULL

@@ -176,12 +176,12 @@ export const seedE2eFixtures = async () => {
 			`;
 		}
 
-		// Two correct votes → validation_status = 'accepted'.
+		// Two acceptable votes → satisfies the ≥1-vote majority-accept rule.
 		await sql`
-			INSERT INTO aud.generated_sentence_validations (sentence_id, is_correct)
-			SELECT s.id, v.is_correct
+			INSERT INTO aud.generated_sentence_classifications (sentence_id, judge_type, overall_acceptable)
+			SELECT s.id, 'human', v.overall_acceptable
 			FROM aud.generated_sentences s
-			CROSS JOIN (VALUES (true), (true)) AS v(is_correct)
+			CROSS JOIN (VALUES (true), (true)) AS v(overall_acceptable)
 			WHERE s.language = ${LANGUAGE}::aud.lang_code
 				AND s.sentence = ${spec.sentence}
 		`;

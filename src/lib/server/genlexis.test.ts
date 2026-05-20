@@ -16,7 +16,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 vi.mock('$lib/server/db/schema', () => ({
-	generatedSentenceValidations: {}
+	generatedSentenceClassifications: {}
 }));
 
 const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisRepository => ({
@@ -38,9 +38,8 @@ describe('genlexis server helpers', () => {
 			sentence: 'Le chat dort.',
 			pattern: 'det noun verb',
 			voteCount: 0,
-			correctCount: 0,
-			incorrectCount: 0,
-			validationStatus: 'unreviewed' as const
+			overallAcceptableCount: 0,
+			overallUnacceptableCount: 0
 		};
 		const repository = makeRepository({
 			findLeastVotedValidationCandidate: vi.fn(async () => candidate)
@@ -50,7 +49,7 @@ describe('genlexis server helpers', () => {
 		expect(repository.findLeastVotedValidationCandidate).toHaveBeenCalledOnce();
 	});
 
-	it('returns an already-accepted candidate when only accepted/rejected remain', async () => {
+	it('returns an already-accepted candidate when only accepted candidates remain', async () => {
 		expect.assertions(1);
 
 		const candidate = {
@@ -58,9 +57,8 @@ describe('genlexis server helpers', () => {
 			sentence: 'La maison tombe.',
 			pattern: 'det noun verb',
 			voteCount: 3,
-			correctCount: 3,
-			incorrectCount: 0,
-			validationStatus: 'accepted' as const
+			overallAcceptableCount: 3,
+			overallUnacceptableCount: 0
 		};
 		const repository = makeRepository({
 			findLeastVotedValidationCandidate: vi.fn(async () => candidate)

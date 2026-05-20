@@ -10,7 +10,7 @@ vi.mock('$lib/server/db', () => ({
 	db: { execute: vi.fn(), insert: vi.fn(() => ({ values: vi.fn() })) }
 }));
 
-vi.mock('$lib/server/db/schema', () => ({ generatedSentenceValidations: {} }));
+vi.mock('$lib/server/db/schema', () => ({ generatedSentenceClassifications: {} }));
 
 const FRENCH_DISTRIBUTION = {
 	ʁ: 0.0773809523809523,

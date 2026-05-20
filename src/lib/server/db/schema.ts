@@ -240,4 +240,68 @@ export const humanClassificationSummaries = aud.view('human_classification_summa
 		GROUP BY s.id, s.language, s.sentence, s.pattern
 	`);
 
+export const sentenceAcceptance = aud.view('sentence_acceptance', {
+	sentenceId: bigint('sentence_id', { mode: 'number' }),
+	language: langCode('language'),
+	sentence: text('sentence'),
+	pattern: text('pattern'),
+	accepted: boolean('accepted')
+}).as(sql`
+		SELECT
+			s.id        AS sentence_id,
+			s.language,
+			s.sentence,
+			s.pattern,
+			CASE
+				WHEN s.pattern IN ('noun', 'det_noun') THEN
+					COALESCE(h.vote_count, 0) >= 1
+					AND COALESCE(h.overall_acceptable_count, 0)
+						>= COALESCE(h.overall_unacceptable_count, 0)
+				ELSE
+					llm.sentence_id IS NOT NULL
+					AND derived.effective_appropriate
+					AND derived.effective_grammatical
+					AND derived.effective_semantics IN ('natural', 'plausible')
+					AND (
+						COALESCE(h.vote_count, 0) = 0
+						OR COALESCE(h.overall_acceptable_count, 0)
+							>= COALESCE(h.overall_unacceptable_count, 0)
+					)
+			END AS accepted
+		FROM aud.generated_sentences s
+		LEFT JOIN aud.human_classification_summaries h ON h.sentence_id = s.id
+		LEFT JOIN aud.latest_llm_classifications    llm ON llm.sentence_id = s.id
+		CROSS JOIN LATERAL (
+			SELECT
+				(llm.appropriate IS TRUE
+					AND NOT EXISTS (
+						SELECT 1
+						FROM aud.generated_sentence_classifications c
+						WHERE c.sentence_id = s.id
+							AND c.judge_type = 'human'
+							AND c.appropriate = FALSE
+					)) AS effective_appropriate,
+				(llm.grammatical IS TRUE
+					OR (
+						COALESCE(h.vote_count, 0) >= 1
+						AND COALESCE(h.overall_acceptable_count, 0)
+							>= COALESCE(h.overall_unacceptable_count, 0)
+					)) AS effective_grammatical,
+				COALESCE(
+					(
+						SELECT c.semantics
+						FROM aud.generated_sentence_classifications c
+						WHERE c.sentence_id = s.id
+							AND c.judge_type = 'human'
+							AND c.semantics IS NOT NULL
+						GROUP BY c.semantics
+						ORDER BY count(*) DESC,
+								 (c.semantics = llm.semantics) DESC
+						LIMIT 1
+					),
+					llm.semantics
+				) AS effective_semantics
+		) derived
+	`);
+
 export * from './auth.schema';

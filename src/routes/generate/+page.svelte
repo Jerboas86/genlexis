@@ -79,11 +79,11 @@
 			<input type="hidden" name="language" value={DEFAULT_LANGUAGE} />
 
 			<div class="field">
-				<label for="pattern">{m.generate_pattern_label()}</label>
+				<label for="pattern">{m.pattern_label()}</label>
 				<select id="pattern" name="pattern" bind:value={pattern}>
-					<option value="det_noun">{m.generate_pattern_det_noun()}</option>
-					<option value="noun">{m.generate_pattern_noun()}</option>
-					<option value="det_noun_adj">{m.generate_pattern_det_noun_adj()}</option>
+					<option value="det_noun">{m.pattern_det_noun()}</option>
+					<option value="noun">{m.pattern_noun()}</option>
+					<option value="det_noun_adj">{m.pattern_det_noun_adj()}</option>
 				</select>
 			</div>
 

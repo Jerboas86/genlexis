@@ -22,6 +22,7 @@ vi.mock('$lib/server/db/schema', () => ({
 const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisRepository => ({
 	findLeastVotedValidationCandidate: vi.fn(async () => null),
 	recordValidation: vi.fn(async () => undefined),
+	recordHumanClassification: vi.fn(async () => undefined),
 	countAcceptedSentences: vi.fn(async () => 0),
 	findRandomAcceptedItems: vi.fn(async () => []),
 	findAcceptedItemsWithIpa: vi.fn(async () => []),
@@ -39,13 +40,14 @@ describe('genlexis server helpers', () => {
 			pattern: 'det noun verb',
 			voteCount: 0,
 			overallAcceptableCount: 0,
-			overallUnacceptableCount: 0
+			overallUnacceptableCount: 0,
+			llm: null
 		};
 		const repository = makeRepository({
 			findLeastVotedValidationCandidate: vi.fn(async () => candidate)
 		});
 
-		await expect(getValidationCandidate(repository)).resolves.toEqual(candidate);
+		await expect(getValidationCandidate(undefined, repository)).resolves.toEqual(candidate);
 		expect(repository.findLeastVotedValidationCandidate).toHaveBeenCalledOnce();
 	});
 
@@ -58,13 +60,14 @@ describe('genlexis server helpers', () => {
 			pattern: 'det noun verb',
 			voteCount: 3,
 			overallAcceptableCount: 3,
-			overallUnacceptableCount: 0
+			overallUnacceptableCount: 0,
+			llm: null
 		};
 		const repository = makeRepository({
 			findLeastVotedValidationCandidate: vi.fn(async () => candidate)
 		});
 
-		await expect(getValidationCandidate(repository)).resolves.toEqual(candidate);
+		await expect(getValidationCandidate(undefined, repository)).resolves.toEqual(candidate);
 	});
 
 	it('records a validation vote', async () => {

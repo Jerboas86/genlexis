@@ -53,6 +53,7 @@ const FRENCH_DISTRIBUTION = {
 const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisRepository => ({
 	findLeastVotedValidationCandidate: vi.fn(async () => null),
 	recordValidation: vi.fn(async () => undefined),
+	recordHumanClassification: vi.fn(async () => undefined),
 	countAcceptedSentences: vi.fn(async () => 0),
 	findRandomAcceptedItems: vi.fn(async () => []),
 	findAcceptedItemsWithIpa: vi.fn(async () => []),

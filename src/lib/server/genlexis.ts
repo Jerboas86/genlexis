@@ -11,6 +11,14 @@ import type {
 	TokenizerOptions
 } from './phonemes/types';
 
+export type SemanticsLabel = 'natural' | 'plausible' | 'strained' | 'nonsensical';
+
+export type LlmClassification = {
+	appropriate: boolean | null;
+	grammatical: boolean | null;
+	semantics: SemanticsLabel | null;
+};
+
 export type SentenceSummary = {
 	sentenceId: number;
 	sentence: string;
@@ -18,6 +26,13 @@ export type SentenceSummary = {
 	voteCount: number;
 	overallAcceptableCount: number;
 	overallUnacceptableCount: number;
+	llm: LlmClassification | null;
+};
+
+export type HumanClassificationInput = {
+	appropriate: boolean;
+	grammatical: boolean | null;
+	semantics: SemanticsLabel | null;
 };
 
 export type AcceptedSentence = Pick<SentenceSummary, 'sentenceId' | 'sentence' | 'pattern'>;
@@ -83,8 +98,14 @@ export type BalancedGenerateResult = GenerateResult & {
 };
 
 export type GenlexisRepository = {
-	findLeastVotedValidationCandidate: () => Promise<SentenceSummary | null>;
+	findLeastVotedValidationCandidate: (
+		pattern?: SupportedPattern
+	) => Promise<SentenceSummary | null>;
 	recordValidation: (sentenceId: number, isCorrect: boolean) => Promise<void>;
+	recordHumanClassification: (
+		sentenceId: number,
+		input: HumanClassificationInput
+	) => Promise<void>;
 	countAcceptedSentences: () => Promise<number>;
 	findRandomAcceptedItems: (options: FindAcceptedItemsOptions) => Promise<AcceptedItem[]>;
 	findAcceptedItemsWithIpa: (
@@ -104,27 +125,67 @@ const detSetFor = (type: DetType | undefined) =>
 	type === 'definite' ? DEFINITE_DETS : type === 'indefinite' ? INDEFINITE_DETS : null;
 
 export const databaseGenlexisRepository: GenlexisRepository = {
-	async findLeastVotedValidationCandidate() {
-		const result = await db.execute<SentenceSummary>(sql`
+	async findLeastVotedValidationCandidate(pattern) {
+		type Row = Omit<SentenceSummary, 'llm'> & {
+			llmAppropriate: boolean | null;
+			llmGrammatical: boolean | null;
+			llmSemantics: SemanticsLabel | null;
+			hasLlm: boolean;
+		};
+
+		const patternFilter = pattern ? sql`AND h.pattern = ${pattern}` : sql``;
+
+		const result = await db.execute<Row>(sql`
 			SELECT
-				sentence_id::int AS "sentenceId",
-				sentence,
-				pattern,
-				vote_count::int AS "voteCount",
-				overall_acceptable_count::int AS "overallAcceptableCount",
-				overall_unacceptable_count::int AS "overallUnacceptableCount"
-			FROM aud.human_classification_summaries
-			ORDER BY vote_count ASC, random()
+				h.sentence_id::int AS "sentenceId",
+				h.sentence,
+				h.pattern,
+				h.vote_count::int AS "voteCount",
+				h.overall_acceptable_count::int AS "overallAcceptableCount",
+				h.overall_unacceptable_count::int AS "overallUnacceptableCount",
+				l.appropriate AS "llmAppropriate",
+				l.grammatical AS "llmGrammatical",
+				l.semantics AS "llmSemantics",
+				(l.sentence_id IS NOT NULL) AS "hasLlm"
+			FROM aud.human_classification_summaries h
+			LEFT JOIN aud.latest_llm_classifications l ON l.sentence_id = h.sentence_id
+			WHERE h.pattern <> 'noun'
+			AND (h.pattern <> 'det_noun_adj' OR l.sentence_id IS NOT NULL)
+			${patternFilter}
+			ORDER BY h.vote_count ASC, random()
 			LIMIT 1
 		`);
 
-		return result.rows[0] ?? null;
+		const row = result.rows[0];
+		if (!row) return null;
+
+		const { llmAppropriate, llmGrammatical, llmSemantics, hasLlm, ...summary } = row;
+		return {
+			...summary,
+			llm: hasLlm
+				? {
+						appropriate: llmAppropriate,
+						grammatical: llmGrammatical,
+						semantics: llmSemantics
+					}
+				: null
+		};
 	},
 
 	async recordValidation(sentenceId, isCorrect) {
 		await db
 			.insert(generatedSentenceClassifications)
 			.values({ sentenceId, judgeType: 'human', overallAcceptable: isCorrect });
+	},
+
+	async recordHumanClassification(sentenceId, { appropriate, grammatical, semantics }) {
+		await db.insert(generatedSentenceClassifications).values({
+			sentenceId,
+			judgeType: 'human',
+			appropriate,
+			grammatical,
+			semantics
+		});
 	},
 
 	async countAcceptedSentences() {
@@ -342,8 +403,20 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 };
 
 export const getValidationCandidate = (
+	pattern?: SupportedPattern,
 	repository: GenlexisRepository = databaseGenlexisRepository
-) => repository.findLeastVotedValidationCandidate();
+) => repository.findLeastVotedValidationCandidate(pattern);
+
+export const SUPPORTED_PATTERNS: readonly SupportedPattern[] = [
+	'noun',
+	'det_noun',
+	'det_noun_adj'
+];
+
+export const parseSupportedPattern = (value: unknown): SupportedPattern | undefined =>
+	typeof value === 'string' && (SUPPORTED_PATTERNS as readonly string[]).includes(value)
+		? (value as SupportedPattern)
+		: undefined;
 
 export const recordValidation = async (
 	sentenceId: number,
@@ -351,6 +424,14 @@ export const recordValidation = async (
 	repository: GenlexisRepository = databaseGenlexisRepository
 ) => {
 	await repository.recordValidation(sentenceId, isCorrect);
+};
+
+export const recordHumanClassification = async (
+	sentenceId: number,
+	input: HumanClassificationInput,
+	repository: GenlexisRepository = databaseGenlexisRepository
+) => {
+	await repository.recordHumanClassification(sentenceId, input);
 };
 
 export const getAcceptedSentenceCount = (

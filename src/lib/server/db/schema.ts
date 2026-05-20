@@ -127,71 +127,116 @@ export const generatedSentenceTokens = aud.table(
 	]
 );
 
-export const generatedSentenceValidations = aud.table(
-	'generated_sentence_validations',
+export const generatedSentenceClassifications = aud.table(
+	'generated_sentence_classifications',
 	{
 		id: bigserial('id', { mode: 'number' }).primaryKey(),
 		sentenceId: bigint('sentence_id', { mode: 'number' })
 			.notNull()
 			.references(() => generatedSentences.id, { onDelete: 'cascade' }),
-		isCorrect: boolean('is_correct').notNull(),
-		validatedAt: timestamp('validated_at', { withTimezone: true }).notNull().defaultNow()
+		judgeType: text('judge_type').notNull(),
+		classifiedAt: timestamp('classified_at', { withTimezone: true }).notNull().defaultNow(),
+		appropriate: boolean('appropriate'),
+		grammatical: boolean('grammatical'),
+		semantics: text('semantics'),
+		classifierModel: text('classifier_model'),
+		classifierPromptHash: text('classifier_prompt_hash'),
+		reactionP1: text('reaction_p1'),
+		reactionP2: text('reaction_p2'),
+		reactionP3: text('reaction_p3'),
+		reasoningSoundP1: boolean('reasoning_sound_p1'),
+		reasoningSoundP2: boolean('reasoning_sound_p2'),
+		reasoningSoundP3: boolean('reasoning_sound_p3'),
+		overallAcceptable: boolean('overall_acceptable'),
+		notes: text('notes')
 	},
 	(t) => [
-		index('generated_sentence_validations_sentence_idx').on(t.sentenceId),
-		index('generated_sentence_validations_validated_at_idx').on(t.validatedAt)
-	]
-);
-
-export const languagePhonemeDistributions = aud.table(
-	'language_phoneme_distributions',
-	{
-		language: langCode('language').notNull(),
-		phoneme: text('phoneme').notNull(),
-		frequency: numeric('frequency').notNull()
-	},
-	(t) => [
-		primaryKey({ columns: [t.language, t.phoneme] }),
 		check(
-			'language_phoneme_distributions_frequency_range',
-			sql`${t.frequency} >= 0 AND ${t.frequency} <= 1`
-		)
+			'generated_sentence_classifications_judge_type_check',
+			sql`${t.judgeType} IN ('llm', 'human')`
+		),
+		check(
+			'generated_sentence_classifications_semantics_check',
+			sql`${t.semantics} IS NULL OR ${t.semantics} IN ('natural', 'plausible', 'strained', 'nonsensical')`
+		),
+		check(
+			'generated_sentence_classifications_shape_check',
+			sql`(${t.judgeType} = 'llm' AND ${t.classifierModel} IS NOT NULL AND ${t.reasoningSoundP1} IS NULL AND ${t.reasoningSoundP2} IS NULL AND ${t.reasoningSoundP3} IS NULL AND ${t.overallAcceptable} IS NULL) OR (${t.judgeType} = 'human' AND ${t.classifierModel} IS NULL AND ${t.classifierPromptHash} IS NULL AND ${t.reactionP1} IS NULL AND ${t.reactionP2} IS NULL AND ${t.reactionP3} IS NULL)`
+		),
+		check(
+			'generated_sentence_classifications_has_signal_check',
+			sql`${t.appropriate} IS NOT NULL OR ${t.grammatical} IS NOT NULL OR ${t.semantics} IS NOT NULL OR ${t.overallAcceptable} IS NOT NULL`
+		),
+		uniqueIndex('classifications_one_llm_per_sentence')
+			.on(t.sentenceId)
+			.where(sql`${t.judgeType} = 'llm'`),
+		index('classifications_sentence_judge_idx').on(t.sentenceId, t.judgeType),
+		index('classifications_classified_at_idx').on(t.classifiedAt)
 	]
 );
 
-export const generatedSentenceValidationSummaries = aud.view(
-	'generated_sentence_validation_summaries',
-	{
-		sentenceId: bigint('sentence_id', { mode: 'number' }),
-		language: langCode('language'),
-		sentence: text('sentence'),
-		pattern: text('pattern'),
-		voteCount: bigint('vote_count', { mode: 'number' }),
-		correctCount: bigint('correct_count', { mode: 'number' }),
-		incorrectCount: bigint('incorrect_count', { mode: 'number' }),
-		validationStatus: text('validation_status')
-	}
-).as(sql`
+export const latestLlmClassifications = aud.view('latest_llm_classifications', {
+	sentenceId: bigint('sentence_id', { mode: 'number' }),
+	appropriate: boolean('appropriate'),
+	grammatical: boolean('grammatical'),
+	semantics: text('semantics'),
+	reactionP1: text('reaction_p1'),
+	reactionP2: text('reaction_p2'),
+	reactionP3: text('reaction_p3'),
+	classifierModel: text('classifier_model'),
+	classifierPromptHash: text('classifier_prompt_hash'),
+	classifiedAt: timestamp('classified_at', { withTimezone: true })
+}).as(sql`
 		SELECT
-			s.id AS sentence_id,
+			sentence_id, appropriate, grammatical, semantics,
+			reaction_p1, reaction_p2, reaction_p3,
+			classifier_model, classifier_prompt_hash, classified_at
+		FROM aud.generated_sentence_classifications
+		WHERE judge_type = 'llm'
+	`);
+
+export const humanClassificationSummaries = aud.view('human_classification_summaries', {
+	sentenceId: bigint('sentence_id', { mode: 'number' }),
+	language: langCode('language'),
+	sentence: text('sentence'),
+	pattern: text('pattern'),
+	voteCount: bigint('vote_count', { mode: 'number' }),
+	overallAcceptableCount: bigint('overall_acceptable_count', { mode: 'number' }),
+	overallUnacceptableCount: bigint('overall_unacceptable_count', { mode: 'number' }),
+	appropriateTrueCount: bigint('appropriate_true_count', { mode: 'number' }),
+	appropriateFalseCount: bigint('appropriate_false_count', { mode: 'number' }),
+	grammaticalTrueCount: bigint('grammatical_true_count', { mode: 'number' }),
+	grammaticalFalseCount: bigint('grammatical_false_count', { mode: 'number' }),
+	semanticsNaturalCount: bigint('semantics_natural_count', { mode: 'number' }),
+	semanticsPlausibleCount: bigint('semantics_plausible_count', { mode: 'number' }),
+	semanticsStrainedCount: bigint('semantics_strained_count', { mode: 'number' }),
+	semanticsNonsensicalCount: bigint('semantics_nonsensical_count', { mode: 'number' }),
+	reasoningUnsoundP1Count: bigint('reasoning_unsound_p1_count', { mode: 'number' }),
+	reasoningUnsoundP2Count: bigint('reasoning_unsound_p2_count', { mode: 'number' }),
+	reasoningUnsoundP3Count: bigint('reasoning_unsound_p3_count', { mode: 'number' })
+}).as(sql`
+		SELECT
+			s.id        AS sentence_id,
 			s.language,
 			s.sentence,
 			s.pattern,
-			count(v.id) AS vote_count,
-			count(*) FILTER (WHERE v.is_correct) AS correct_count,
-			count(*) FILTER (WHERE NOT v.is_correct) AS incorrect_count,
-			CASE
-				WHEN count(v.id) = 0 THEN 'unreviewed'
-				WHEN count(v.id) < 2 THEN 'needs_more_votes'
-				WHEN count(*) FILTER (WHERE v.is_correct) > count(*) FILTER (WHERE NOT v.is_correct)
-					THEN 'accepted'
-				WHEN count(*) FILTER (WHERE NOT v.is_correct) > count(*) FILTER (WHERE v.is_correct)
-					THEN 'rejected'
-				ELSE 'needs_more_votes'
-			END AS validation_status
+			count(c.id) AS vote_count,
+			count(*) FILTER (WHERE c.overall_acceptable IS TRUE)  AS overall_acceptable_count,
+			count(*) FILTER (WHERE c.overall_acceptable IS FALSE) AS overall_unacceptable_count,
+			count(*) FILTER (WHERE c.appropriate IS TRUE)  AS appropriate_true_count,
+			count(*) FILTER (WHERE c.appropriate IS FALSE) AS appropriate_false_count,
+			count(*) FILTER (WHERE c.grammatical IS TRUE)  AS grammatical_true_count,
+			count(*) FILTER (WHERE c.grammatical IS FALSE) AS grammatical_false_count,
+			count(*) FILTER (WHERE c.semantics = 'natural')     AS semantics_natural_count,
+			count(*) FILTER (WHERE c.semantics = 'plausible')   AS semantics_plausible_count,
+			count(*) FILTER (WHERE c.semantics = 'strained')    AS semantics_strained_count,
+			count(*) FILTER (WHERE c.semantics = 'nonsensical') AS semantics_nonsensical_count,
+			count(*) FILTER (WHERE c.reasoning_sound_p1 IS FALSE) AS reasoning_unsound_p1_count,
+			count(*) FILTER (WHERE c.reasoning_sound_p2 IS FALSE) AS reasoning_unsound_p2_count,
+			count(*) FILTER (WHERE c.reasoning_sound_p3 IS FALSE) AS reasoning_unsound_p3_count
 		FROM aud.generated_sentences s
-		LEFT JOIN aud.generated_sentence_validations v
-			ON v.sentence_id = s.id
+		LEFT JOIN aud.generated_sentence_classifications c
+			ON c.sentence_id = s.id AND c.judge_type = 'human'
 		GROUP BY s.id, s.language, s.sentence, s.pattern
 	`);
 

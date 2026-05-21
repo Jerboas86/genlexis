@@ -74,6 +74,7 @@
 	"generate_items_per_list_label": "Éléments par liste",
 	"generate_list_heading": "Liste {index}",
 	"generate_partial_notice": "Seuls {actual} éléments sur les {requested} demandés correspondent à vos filtres.",
+	"generate_empty_notice": "Aucune phrase disponible pour les filtres sélectionnés.",
 	"generate_balance_label": "Équilibrer par phonèmes",
 	"generate_balance_help": "Sélectionne les mots pour approcher la distribution phonémique du français dans chaque liste.",
 	"generate_score_label": "Score : {score}",

@@ -74,6 +74,7 @@
 	"generate_items_per_list_label": "Items per list",
 	"generate_list_heading": "List {index}",
 	"generate_partial_notice": "Only {actual} of the {requested} requested items matched your filters.",
+	"generate_empty_notice": "No sentence available for the selected filters.",
 	"generate_balance_label": "Balance by phonemes",
 	"generate_balance_help": "Pick words so each list approximates the French phoneme distribution.",
 	"generate_score_label": "Score: {score}",

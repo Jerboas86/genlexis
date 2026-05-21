@@ -33,7 +33,8 @@
 	const requestedTotal = $derived(
 		result ? result.requestedLists * result.requestedItemsPerList : 0
 	);
-	const isPartial = $derived(!!result && result.totalItems < requestedTotal);
+	const isEmpty = $derived(!!result && result.totalItems === 0);
+	const isPartial = $derived(!!result && result.totalItems > 0 && result.totalItems < requestedTotal);
 	const scores = $derived(balanced && balancedResult ? balancedResult.scores : null);
 	const showUnbalancedWarning = $derived(
 		!!scores && scores.length > 0 && scores.some((s) => s > UNBALANCED_THRESHOLD)
@@ -190,7 +191,13 @@
 			</div>
 		</form>
 
-		{#if result && lists.length}
+		{#if result && isEmpty}
+			<p class="notice partial" data-testid="empty-notice">
+				{m.generate_empty_notice()}
+			</p>
+		{/if}
+
+		{#if result && !isEmpty && lists.length}
 			{#if isPartial}
 				<p class="notice partial">
 					{m.generate_partial_notice({

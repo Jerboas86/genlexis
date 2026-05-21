@@ -34,7 +34,9 @@
 		result ? result.requestedLists * result.requestedItemsPerList : 0
 	);
 	const isEmpty = $derived(!!result && result.totalItems === 0);
-	const isPartial = $derived(!!result && result.totalItems > 0 && result.totalItems < requestedTotal);
+	const isPartial = $derived(
+		!!result && result.totalItems > 0 && result.totalItems < requestedTotal
+	);
 	const scores = $derived(balanced && balancedResult ? balancedResult.scores : null);
 	const showUnbalancedWarning = $derived(
 		!!scores && scores.length > 0 && scores.some((s) => s > UNBALANCED_THRESHOLD)

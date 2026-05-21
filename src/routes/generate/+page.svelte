@@ -24,6 +24,7 @@
 	let lexicalDensity = $state<'' | 'high' | 'medium' | 'low'>('');
 	let listCount = $state(1);
 	let itemsPerList = $state(10);
+	let seed = $state('');
 	let balanced = $state(false);
 
 	const activeForm = $derived(balanced ? generateBalanced : generate);
@@ -175,6 +176,18 @@
 					min="1"
 					max={MAX_ITEMS_PER_LIST}
 					bind:value={itemsPerList}
+				/>
+			</div>
+
+			<div class="field">
+				<label for="seed">Seed</label>
+				<input
+					id="seed"
+					name="seed"
+					type="text"
+					placeholder="random"
+					maxlength="128"
+					bind:value={seed}
 				/>
 			</div>
 

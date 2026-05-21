@@ -112,7 +112,8 @@ describe('genlexis server helpers', () => {
 			lengthUnit: undefined,
 			length: undefined,
 			lexicalDensity: undefined,
-			limit: 6
+			limit: 6,
+			seed: undefined
 		} satisfies FindAcceptedItemsOptions);
 		expect(result.lists).toHaveLength(3);
 		expect(result.lists.map((list) => list.length)).toEqual([2, 2, 2]);
@@ -155,6 +156,79 @@ describe('genlexis server helpers', () => {
 
 		expect(result.totalItems).toBe(2);
 		expect(result.lists.map((list) => list.length)).toEqual([1, 1, 0, 0, 0]);
+	});
+
+	it('forwards the seed option to the repository when provided', async () => {
+		expect.assertions(1);
+
+		const findRandomAcceptedItems = vi.fn(async () => []);
+		const repository = makeRepository({ findRandomAcceptedItems });
+
+		await generateAcceptedSentences(
+			{ pattern: 'noun', listCount: 1, itemsPerList: 3, seed: 'abc-123' },
+			repository
+		);
+
+		expect(findRandomAcceptedItems).toHaveBeenCalledWith(
+			expect.objectContaining({ seed: 'abc-123' })
+		);
+	});
+
+	it('forwards an undefined seed when none is provided', async () => {
+		expect.assertions(1);
+
+		const findRandomAcceptedItems = vi.fn(async () => []);
+		const repository = makeRepository({ findRandomAcceptedItems });
+
+		await generateAcceptedSentences({ pattern: 'noun', listCount: 1, itemsPerList: 3 }, repository);
+
+		expect(findRandomAcceptedItems).toHaveBeenCalledWith(
+			expect.objectContaining({ seed: undefined })
+		);
+	});
+
+	it('produces identical lists when the repository honors a stable seed', async () => {
+		expect.assertions(2);
+
+		const allItems: AcceptedItem[] = Array.from({ length: 20 }, (_, i) => ({
+			sentenceId: i + 1,
+			sentence: `S${i + 1}`,
+			pattern: 'noun',
+			dedupeKey: `n${i + 1}`
+		}));
+
+		const hash = (s: string) => {
+			let h = 0;
+			for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+			return h;
+		};
+		const seededOrder = (seed: string) =>
+			[...allItems].sort((a, b) => hash(seed + a.dedupeKey) - hash(seed + b.dedupeKey));
+
+		const findRandomAcceptedItems = vi.fn(
+			async (options: FindAcceptedItemsOptions): Promise<AcceptedItem[]> => {
+				const ordered = options.seed ? seededOrder(options.seed) : allItems;
+				return ordered.slice(0, options.limit);
+			}
+		);
+		const repository = makeRepository({ findRandomAcceptedItems });
+
+		const first = await generateAcceptedSentences(
+			{ pattern: 'noun', listCount: 2, itemsPerList: 3, seed: 'fixed' },
+			repository
+		);
+		const second = await generateAcceptedSentences(
+			{ pattern: 'noun', listCount: 2, itemsPerList: 3, seed: 'fixed' },
+			repository
+		);
+		const different = await generateAcceptedSentences(
+			{ pattern: 'noun', listCount: 2, itemsPerList: 3, seed: 'other' },
+			repository
+		);
+
+		const flatten = (r: typeof first) => r.lists.flatMap((l) => l.map((s) => s.sentenceId));
+		expect(flatten(second)).toEqual(flatten(first));
+		expect(flatten(different)).not.toEqual(flatten(first));
 	});
 
 	it('clamps listCount to the [1, 5] range', async () => {

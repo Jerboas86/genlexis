@@ -56,6 +56,7 @@ export type GenerateOptions = {
 	lexicalDensity?: LexicalDensity;
 	listCount: number;
 	itemsPerList: number;
+	seed?: string;
 };
 
 export type GenerateResult = {
@@ -74,6 +75,7 @@ export type FindAcceptedItemsOptions = {
 	length?: number;
 	lexicalDensity?: LexicalDensity;
 	limit: number;
+	seed?: string;
 };
 
 export type AcceptedItemWithIpa = AcceptedItem & { phonoIpa: string };
@@ -203,7 +205,8 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		lengthUnit,
 		length,
 		lexicalDensity,
-		limit
+		limit,
+		seed
 	}) {
 		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj';
 		const hasAdj = pattern === 'det_noun_adj';
@@ -252,6 +255,13 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					: lexicalDensity === 'low'
 						? sql`AND noun_le.pld20 IS NOT NULL AND noun_le.pld20 > 3.2`
 						: sql``;
+
+		const innerOrder: SQL = seed
+			? sql`hashtext(${seed + '|i|'} || s.sentence_id::text)`
+			: sql`random()`;
+		const outerOrder: SQL = seed
+			? sql`hashtext(${seed + '|o|'} || "sentenceId"::text)`
+			: sql`random()`;
 
 		const result = await db.execute<AcceptedItem>(sql`
 			WITH candidates AS (
@@ -277,11 +287,11 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					${lengthFilter}
 					${lexicalDensityFilter}
 					${detFilter}
-				ORDER BY ${dedupeExpr}, random()
+				ORDER BY ${dedupeExpr}, ${innerOrder}
 			)
 			SELECT "sentenceId", sentence, pattern, "dedupeKey"
 			FROM candidates
-			ORDER BY random()
+			ORDER BY ${outerOrder}
 			LIMIT ${limit}
 		`);
 
@@ -297,7 +307,8 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		lengthUnit,
 		length,
 		lexicalDensity,
-		poolSize
+		poolSize,
+		seed
 	}) {
 		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj';
 		const hasAdj = pattern === 'det_noun_adj';
@@ -346,6 +357,13 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					: lexicalDensity === 'low'
 						? sql`AND noun_le.pld20 IS NOT NULL AND noun_le.pld20 > 3.2`
 						: sql``;
+
+		const innerOrder: SQL = seed
+			? sql`hashtext(${seed + '|i|'} || s.sentence_id::text)`
+			: sql`random()`;
+		const outerOrder: SQL = seed
+			? sql`hashtext(${seed + '|o|'} || "sentenceId"::text)`
+			: sql`random()`;
 
 		const result = await db.execute<AcceptedItemWithIpa>(sql`
 			WITH candidates AS (
@@ -375,11 +393,11 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					${lengthFilter}
 					${lexicalDensityFilter}
 					${detFilter}
-				ORDER BY ${dedupeExpr}, random()
+				ORDER BY ${dedupeExpr}, ${innerOrder}
 			)
 			SELECT "sentenceId", sentence, pattern, "dedupeKey", "phonoIpa"
 			FROM candidates
-			ORDER BY random()
+			ORDER BY ${outerOrder}
 			LIMIT ${poolSize}
 		`);
 
@@ -453,7 +471,8 @@ export const generateAcceptedSentences = async (
 		lengthUnit: options.lengthUnit,
 		length: options.length,
 		lexicalDensity: options.lexicalDensity,
-		limit: target
+		limit: target,
+		seed: options.seed
 	});
 
 	const seen = new Set<string>();
@@ -506,7 +525,8 @@ export const generateBalancedAcceptedSentences = async (
 		lengthUnit: options.lengthUnit,
 		length: options.length,
 		lexicalDensity: options.lexicalDensity,
-		poolSize
+		poolSize,
+		seed: options.seed
 	});
 
 	const seen = new Set<string>();

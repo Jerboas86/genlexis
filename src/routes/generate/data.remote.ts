@@ -67,6 +67,16 @@ const parseLanguage = (value: unknown): string | undefined => {
 	return value;
 };
 
+const MAX_SEED_LENGTH = 128;
+
+const parseSeed = (value: unknown): string | undefined => {
+	if (typeof value !== 'string') return undefined;
+	const trimmed = value.trim();
+	if (trimmed === '') return undefined;
+	if (trimmed.length > MAX_SEED_LENGTH) return undefined;
+	return trimmed;
+};
+
 export const generate = form(
 	'unchecked',
 	async (data: Record<string, unknown>): Promise<GenerateResult> => {
@@ -83,6 +93,7 @@ export const generate = form(
 		const lexicalDensity = parseEnum<LexicalDensity>(data.lexicalDensity, LEXICAL_DENSITIES);
 		const listCount = parseInteger(data.listCount, 1, MAX_LISTS, 1);
 		const itemsPerList = parseInteger(data.itemsPerList, 1, MAX_ITEMS_PER_LIST, 10);
+		const seed = parseSeed(data.seed);
 
 		return generateAcceptedSentences({
 			pattern,
@@ -93,7 +104,8 @@ export const generate = form(
 			length,
 			lexicalDensity,
 			listCount,
-			itemsPerList
+			itemsPerList,
+			seed
 		});
 	}
 );
@@ -117,6 +129,7 @@ export const generateBalanced = form(
 		const lexicalDensity = parseEnum<LexicalDensity>(data.lexicalDensity, LEXICAL_DENSITIES);
 		const listCount = parseInteger(data.listCount, 1, MAX_LISTS, 1);
 		const itemsPerList = parseInteger(data.itemsPerList, 1, MAX_ITEMS_PER_LIST, 10);
+		const seed = parseSeed(data.seed);
 
 		try {
 			return await generateBalancedAcceptedSentences({
@@ -129,7 +142,8 @@ export const generateBalanced = form(
 				length,
 				lexicalDensity,
 				listCount,
-				itemsPerList
+				itemsPerList,
+				seed
 			});
 		} catch (err) {
 			if (err instanceof Error && err.message.startsWith('No phoneme distribution')) {

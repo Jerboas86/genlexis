@@ -9,10 +9,17 @@
 	import { candidate, classify, correct, incorrect } from './data.remote';
 	import { ANY_PATTERN, type PatternFilter } from './filter';
 
-	const PATTERN_FILTERS: readonly PatternFilter[] = [ANY_PATTERN, 'det_noun', 'det_noun_adj'];
+	const PATTERN_FILTERS: readonly PatternFilter[] = [
+		ANY_PATTERN,
+		'det_noun',
+		'det_noun_adj',
+		'np_verb'
+	];
 
 	const filterFromUrl = (value: string | null): PatternFilter =>
-		value === 'det_noun' || value === 'det_noun_adj' ? value : ANY_PATTERN;
+		value === 'det_noun' || value === 'det_noun_adj' || value === 'np_verb'
+			? value
+			: ANY_PATTERN;
 
 	const filter = $derived(filterFromUrl(page.url.searchParams.get('pattern')));
 
@@ -34,11 +41,12 @@
 		({
 			[ANY_PATTERN]: m.classify_filter_any(),
 			det_noun: m.pattern_det_noun(),
-			det_noun_adj: m.pattern_det_noun_adj()
+			det_noun_adj: m.pattern_det_noun_adj(),
+			np_verb: m.pattern_np_verb()
 		})[value];
 
 	const instruction = $derived.by(() => {
-		if (filter === 'det_noun_adj') return m.classify_instruction_cascade();
+		if (filter === 'det_noun_adj' || filter === 'np_verb') return m.classify_instruction_cascade();
 		if (filter === 'det_noun') return m.classify_instruction_binary();
 		return m.classify_instruction();
 	});
@@ -66,7 +74,7 @@
 
 	$effect(() => {
 		const item = query.current;
-		if (!item || item.pattern !== 'det_noun_adj') {
+		if (!item || (item.pattern !== 'det_noun_adj' && item.pattern !== 'np_verb')) {
 			currentSentenceId = null;
 			return;
 		}
@@ -125,7 +133,7 @@
 			<p class="meta">{m.classify_vote_count({ count: query.current.voteCount })}</p>
 		</article>
 
-		{#if query.current.pattern === 'det_noun_adj'}
+		{#if query.current.pattern === 'det_noun_adj' || query.current.pattern === 'np_verb'}
 			<form class="classify-form" {...classify}>
 				<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
 				<input type="hidden" name="filter" value={filter} />

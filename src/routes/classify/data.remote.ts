@@ -23,7 +23,7 @@ const parseSentenceId = (value: unknown) => {
 };
 
 const parseFilter = (value: unknown): PatternFilter =>
-	value === 'det_noun' || value === 'det_noun_adj' ? value : ANY_PATTERN;
+	value === 'det_noun' || value === 'det_noun_adj' || value === 'np_verb' ? value : ANY_PATTERN;
 
 const vote = async (data: Record<string, unknown>, isCorrect: boolean) => {
 	const sentenceId = parseSentenceId(data.sentenceId);

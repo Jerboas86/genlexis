@@ -47,6 +47,7 @@
 	"pattern_det_noun": "Déterminant + nom",
 	"pattern_noun": "Nom",
 	"pattern_det_noun_adj": "Déterminant + nom + adjectif",
+	"pattern_np_verb": "Groupe nominal + verbe",
 	"generate_det_type_label": "Type de déterminant",
 	"generate_det_type_any": "Indifférent",
 	"generate_det_type_definite": "Défini",

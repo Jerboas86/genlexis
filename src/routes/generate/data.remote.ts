@@ -19,10 +19,10 @@ const MAX_LISTS = 5;
 const MAX_ITEMS_PER_LIST = 50;
 const MAX_NOUN_LENGTH = 20;
 
-const SUPPORTED_PATTERNS: SupportedPattern[] = ['det_noun', 'noun', 'det_noun_adj'];
+const SUPPORTED_PATTERNS: SupportedPattern[] = ['det_noun', 'noun', 'det_noun_adj', 'np_verb'];
 
 const patternHasDet = (pattern: SupportedPattern) =>
-	pattern === 'det_noun' || pattern === 'det_noun_adj';
+	pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
 const DET_TYPES: DetType[] = ['definite', 'indefinite'];
 const GENDERS: Gender[] = ['m', 'f'];
 const GRAMM_NUMBERS: GrammNumber[] = ['s', 'p'];

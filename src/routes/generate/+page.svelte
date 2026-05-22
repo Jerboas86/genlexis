@@ -15,7 +15,7 @@
 	await summaryQuery;
 	const canGenerate = $derived(summaryQuery.current?.canGenerate ?? true);
 
-	let pattern = $state<'det_noun' | 'noun' | 'det_noun_adj'>('det_noun');
+	let pattern = $state<'det_noun' | 'noun' | 'det_noun_adj' | 'np_verb'>('det_noun');
 	let detType = $state<'' | 'definite' | 'indefinite'>('');
 	let gender = $state<'' | 'm' | 'f'>('');
 	let grammNumber = $state<'' | 's' | 'p'>('');
@@ -88,10 +88,11 @@
 					<option value="det_noun">{m.pattern_det_noun()}</option>
 					<option value="noun">{m.pattern_noun()}</option>
 					<option value="det_noun_adj">{m.pattern_det_noun_adj()}</option>
+					<option value="np_verb">{m.pattern_np_verb()}</option>
 				</select>
 			</div>
 
-			{#if pattern === 'det_noun' || pattern === 'det_noun_adj'}
+			{#if pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb'}
 				<div class="field">
 					<label for="detType">{m.generate_det_type_label()}</label>
 					<select id="detType" name="detType" bind:value={detType}>

@@ -39,7 +39,7 @@ export type AcceptedSentence = Pick<SentenceSummary, 'sentenceId' | 'sentence' |
 
 export type AcceptedItem = AcceptedSentence & { dedupeKey: string };
 
-export type SupportedPattern = 'det_noun' | 'noun' | 'det_noun_adj';
+export type SupportedPattern = 'det_noun' | 'noun' | 'det_noun_adj' | 'np_verb';
 export type DetType = 'definite' | 'indefinite';
 export type Gender = 'm' | 'f';
 export type GrammNumber = 's' | 'p';
@@ -149,7 +149,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 			FROM aud.human_classification_summaries h
 			LEFT JOIN aud.latest_llm_classifications l ON l.sentence_id = h.sentence_id
 			WHERE h.pattern <> 'noun'
-			AND (h.pattern <> 'det_noun_adj' OR l.sentence_id IS NOT NULL)
+			AND (h.pattern NOT IN ('det_noun_adj', 'np_verb') OR l.sentence_id IS NOT NULL)
 			${patternFilter}
 			ORDER BY h.vote_count ASC, random()
 			LIMIT 1
@@ -208,7 +208,8 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		limit,
 		seed
 	}) {
-		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj';
+		const hasDet =
+			pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
 		const hasAdj = pattern === 'det_noun_adj';
 
 		const detJoin: SQL = hasDet
@@ -310,7 +311,8 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		poolSize,
 		seed
 	}) {
-		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj';
+		const hasDet =
+			pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
 		const hasAdj = pattern === 'det_noun_adj';
 
 		const detJoin: SQL = hasDet
@@ -422,7 +424,12 @@ export const getValidationCandidate = (
 	repository: GenlexisRepository = databaseGenlexisRepository
 ) => repository.findLeastVotedValidationCandidate(pattern);
 
-export const SUPPORTED_PATTERNS: readonly SupportedPattern[] = ['noun', 'det_noun', 'det_noun_adj'];
+export const SUPPORTED_PATTERNS: readonly SupportedPattern[] = [
+	'noun',
+	'det_noun',
+	'det_noun_adj',
+	'np_verb'
+];
 
 export const parseSupportedPattern = (value: unknown): SupportedPattern | undefined =>
 	typeof value === 'string' && (SUPPORTED_PATTERNS as readonly string[]).includes(value)

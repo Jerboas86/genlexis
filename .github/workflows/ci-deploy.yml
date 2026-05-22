@@ -53,6 +53,7 @@ jobs:
 
   deploy:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+    needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

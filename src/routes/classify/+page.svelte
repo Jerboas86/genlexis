@@ -17,9 +17,7 @@
 	];
 
 	const filterFromUrl = (value: string | null): PatternFilter =>
-		value === 'det_noun' || value === 'det_noun_adj' || value === 'np_verb'
-			? value
-			: ANY_PATTERN;
+		value === 'det_noun' || value === 'det_noun_adj' || value === 'np_verb' ? value : ANY_PATTERN;
 
 	const filter = $derived(filterFromUrl(page.url.searchParams.get('pattern')));
 

@@ -208,8 +208,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		limit,
 		seed
 	}) {
-		const hasDet =
-			pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
+		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
 		const hasAdj = pattern === 'det_noun_adj';
 
 		const detJoin: SQL = hasDet
@@ -311,8 +310,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 		poolSize,
 		seed
 	}) {
-		const hasDet =
-			pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
+		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
 		const hasAdj = pattern === 'det_noun_adj';
 
 		const detJoin: SQL = hasDet

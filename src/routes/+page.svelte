@@ -27,6 +27,19 @@
 			<span>{m.home_generate_description()}</span>
 		</a>
 	</nav>
+
+	<section class="support">
+		<h2>{m.home_support_title()}</h2>
+		<p>{m.home_support_body()}</p>
+		<a
+			class="support-cta"
+			href="https://fr.tipeee.com/genlexis/"
+			target="_blank"
+			rel="noopener noreferrer"
+		>
+			{m.home_support_cta()}
+		</a>
+	</section>
 </main>
 
 <style>
@@ -112,6 +125,42 @@
 		max-width: 34ch;
 		font-size: var(--font-size-body-md);
 		line-height: var(--line-height-body);
+	}
+
+	.support {
+		margin-top: var(--space-section);
+		padding: var(--space-xxl);
+		border-radius: var(--product-card-radius);
+		background: var(--color-surface-muted, rgba(0, 0, 0, 0.04));
+	}
+
+	.support h2 {
+		margin: 0;
+		font-size: var(--font-size-heading-md);
+		font-weight: var(--font-weight-semibold);
+		line-height: var(--line-height-heading);
+	}
+
+	.support p {
+		margin: var(--space-md) 0 var(--space-xl);
+		max-width: 60ch;
+		color: var(--color-slate);
+		font-size: var(--font-size-body-md);
+		line-height: var(--line-height-body);
+	}
+
+	.support-cta {
+		display: inline-block;
+		padding: var(--space-sm) var(--space-xl);
+		color: var(--color-on-primary);
+		text-decoration: none;
+		font-weight: var(--font-weight-semibold);
+		border-radius: var(--radius-xxxl);
+		background: var(--color-primary);
+	}
+
+	.support-cta:hover {
+		transform: translateY(-2px);
 	}
 
 	@media (max-width: 900px) {

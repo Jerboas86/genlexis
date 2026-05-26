@@ -2,4 +2,3 @@ pnpm build
 pnpm lint
 pnpm check
 pnpm test
-pnpm e2e

@@ -40,7 +40,7 @@
 		"@neondatabase/serverless": "^1.1.0",
 		"@playwright/test": "^1.60.0",
 		"@sveltejs/adapter-cloudflare": "^7.2.8",
-		"@sveltejs/kit": "^2.60.1",
+		"@sveltejs/kit": "^2.61.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@types/node": "^25.9.1",
 		"@vitest/browser-playwright": "^4.1.7",
@@ -62,6 +62,6 @@
 		"vite": "^8.0.14",
 		"vitest": "^4.1.7",
 		"vitest-browser-svelte": "^2.1.1",
-		"wrangler": "^4.93.1"
+		"wrangler": "^4.94.0"
 	}
 }

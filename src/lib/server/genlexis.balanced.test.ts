@@ -65,13 +65,14 @@ const makeItem = (
 	sentenceId: number,
 	sentence: string,
 	phonoIpa: string,
-	dedupeKey: string
+	dedupeKey: string,
+	extraIpas: string[] = []
 ): AcceptedItemWithIpa => ({
 	sentenceId,
 	sentence,
 	pattern: 'det_noun',
 	dedupeKey,
-	phonoIpa
+	phonoIpas: [phonoIpa, ...extraIpas]
 });
 
 describe('generateBalancedAcceptedSentences', () => {
@@ -179,6 +180,38 @@ describe('generateBalancedAcceptedSentences', () => {
 
 		const flat = result.lists.flat().map((entry) => entry.sentenceId);
 		expect(new Set(flat).size).toBe(flat.length);
+	});
+
+	it('includes the verb IPA in the np_verb balance', async () => {
+		expect.assertions(2);
+		const items: AcceptedItemWithIpa[] = [
+			{
+				sentenceId: 1,
+				sentence: 'Le chien court',
+				pattern: 'np_verb',
+				dedupeKey: 'chien court',
+				phonoIpas: ['ʃjɛ̃', 'kuʁ']
+			},
+			{
+				sentenceId: 2,
+				sentence: 'Le X Y',
+				pattern: 'np_verb',
+				dedupeKey: 'x y',
+				phonoIpas: ['xx', 'qq']
+			}
+		];
+		const repository = makeRepository({
+			getPhonemeDistribution: vi.fn(async () => FRENCH_DISTRIBUTION),
+			findAcceptedItemsWithIpa: vi.fn(async () => items)
+		});
+
+		const result = await generateBalancedAcceptedSentences(
+			{ language: 'fr-FR', pattern: 'np_verb', listCount: 1, itemsPerList: 1 },
+			repository
+		);
+
+		expect(result.poolSize).toBe(1);
+		expect(result.lists[0][0].sentence).toBe('Le chien court');
 	});
 
 	it('clamps listCount to [1, 5] like the random generator', async () => {

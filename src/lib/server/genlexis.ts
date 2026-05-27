@@ -2,7 +2,7 @@ import { sql, type SQL } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { generatedSentenceClassifications } from '$lib/server/db/schema';
 import { selectBalancedLists } from './phonemes/balancer';
-import { tokensToCounts } from './phonemes/distribution';
+import { addCounts, tokensToCounts } from './phonemes/distribution';
 import { createIpaTokenizer } from './phonemes/tokenizer';
 import type {
 	PhonemeCounts,
@@ -78,7 +78,7 @@ export type FindAcceptedItemsOptions = {
 	seed?: string;
 };
 
-export type AcceptedItemWithIpa = AcceptedItem & { phonoIpa: string };
+export type AcceptedItemWithIpa = AcceptedItem & { phonoIpas: string[] };
 
 export type FindAcceptedItemsWithIpaOptions = Omit<FindAcceptedItemsOptions, 'limit'> & {
 	language: string;
@@ -312,6 +312,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 	}) {
 		const hasDet = pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
 		const hasAdj = pattern === 'det_noun_adj';
+		const hasVerb = pattern === 'np_verb';
 
 		const detJoin: SQL = hasDet
 			? sql`JOIN aud.generated_sentence_tokens det_token
@@ -324,7 +325,20 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 			? sql`JOIN aud.generated_sentence_tokens adj_token
 					ON adj_token.sentence_id = s.sentence_id
 					AND adj_token.language = s.language
-					AND adj_token.slot = 'adj'`
+					AND adj_token.slot = 'adj'
+				LEFT JOIN aud.lexical_entries adj_le
+					ON adj_le.id = adj_token.lexical_entry_id
+					AND adj_le.language = adj_token.language`
+			: sql``;
+
+		const verbJoin: SQL = hasVerb
+			? sql`JOIN aud.generated_sentence_tokens verb_token
+					ON verb_token.sentence_id = s.sentence_id
+					AND verb_token.language = s.language
+					AND verb_token.slot = 'verb'
+				LEFT JOIN aud.lexical_entries verb_le
+					ON verb_le.id = verb_token.lexical_entry_id
+					AND verb_le.language = verb_token.language`
 			: sql``;
 
 		const detSet = detSetFor(detType);
@@ -338,7 +352,14 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 
 		const dedupeExpr: SQL = hasAdj
 			? sql`LOWER(noun_token.surface || ' ' || adj_token.surface)`
-			: sql`LOWER(noun_token.surface)`;
+			: hasVerb
+				? sql`LOWER(noun_token.surface || ' ' || verb_token.surface)`
+				: sql`LOWER(noun_token.surface)`;
+
+		const adjIpaSelect: SQL = hasAdj ? sql`, adj_le.phono_ipa AS "adjPhonoIpa"` : sql``;
+		const verbIpaSelect: SQL = hasVerb ? sql`, verb_le.phono_ipa AS "verbPhonoIpa"` : sql``;
+		const adjIpaPick: SQL = hasAdj ? sql`, "adjPhonoIpa"` : sql``;
+		const verbIpaPick: SQL = hasVerb ? sql`, "verbPhonoIpa"` : sql``;
 
 		const genderFilter: SQL = gender ? sql`AND noun_le.gender = ${gender}` : sql``;
 		const numberFilter: SQL = grammNumber ? sql`AND noun_le.number = ${grammNumber}` : sql``;
@@ -365,7 +386,13 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 			? sql`hashtext(${seed + '|o|'} || "sentenceId"::text)`
 			: sql`random()`;
 
-		const result = await db.execute<AcceptedItemWithIpa>(sql`
+		type Row = AcceptedItem & {
+			phonoIpa: string;
+			adjPhonoIpa?: string | null;
+			verbPhonoIpa?: string | null;
+		};
+
+		const result = await db.execute<Row>(sql`
 			WITH candidates AS (
 				SELECT DISTINCT ON (${dedupeExpr})
 					s.sentence_id::int AS "sentenceId",
@@ -373,6 +400,8 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					s.pattern,
 					${dedupeExpr} AS "dedupeKey",
 					noun_le.phono_ipa AS "phonoIpa"
+					${adjIpaSelect}
+					${verbIpaSelect}
 				FROM aud.sentence_acceptance s
 				JOIN aud.generated_sentence_tokens noun_token
 					ON noun_token.sentence_id = s.sentence_id
@@ -383,6 +412,7 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					AND noun_le.language = noun_token.language
 				${detJoin}
 				${adjJoin}
+				${verbJoin}
 				WHERE s.accepted = TRUE
 					AND s.language = ${language}
 					AND s.pattern = ${pattern}
@@ -395,13 +425,24 @@ export const databaseGenlexisRepository: GenlexisRepository = {
 					${detFilter}
 				ORDER BY ${dedupeExpr}, ${innerOrder}
 			)
-			SELECT "sentenceId", sentence, pattern, "dedupeKey", "phonoIpa"
+			SELECT "sentenceId", sentence, pattern, "dedupeKey", "phonoIpa"${adjIpaPick}${verbIpaPick}
 			FROM candidates
 			ORDER BY ${outerOrder}
 			LIMIT ${poolSize}
 		`);
 
-		return result.rows;
+		return result.rows.map((row) => {
+			const phonoIpas = [row.phonoIpa];
+			if (row.adjPhonoIpa) phonoIpas.push(row.adjPhonoIpa);
+			if (row.verbPhonoIpa) phonoIpas.push(row.verbPhonoIpa);
+			return {
+				sentenceId: row.sentenceId,
+				sentence: row.sentence,
+				pattern: row.pattern,
+				dedupeKey: row.dedupeKey,
+				phonoIpas
+			};
+		});
 	},
 
 	async getPhonemeDistribution(language) {
@@ -546,8 +587,12 @@ export const generateBalancedAcceptedSentences = async (
 	const itemsById = new Map<number, AcceptedItemWithIpa>();
 	const pool: PooledWord[] = [];
 	for (const item of unique) {
-		const { tokens } = tokenizer.tokenize(item.phonoIpa);
-		const counts: PhonemeCounts = tokensToCounts(tokens);
+		let counts: PhonemeCounts = {};
+		for (const ipa of item.phonoIpas) {
+			if (!ipa) continue;
+			const { tokens } = tokenizer.tokenize(ipa);
+			counts = addCounts(counts, tokensToCounts(tokens));
+		}
 		if (Object.keys(counts).length === 0) continue;
 		itemsById.set(item.sentenceId, item);
 		pool.push({ id: item.sentenceId, counts });

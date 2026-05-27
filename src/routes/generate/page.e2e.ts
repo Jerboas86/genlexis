@@ -206,4 +206,57 @@ test.describe('/generate', () => {
 		expect(await listsCount(page)).toBe(4);
 		expect((await sentencesIn(page)).length).toBe(8);
 	});
+
+	test('stores generated parameters in the URL hash and restores the same lists', async ({
+		page
+	}) => {
+		await goToGenerate(page);
+
+		await setSelect(page, '#pattern', 'det_noun');
+		await setSelect(page, '#gender', 'f');
+		await setSelect(page, '#grammNumber', 's');
+		await setNumber(page, '#listCount', '2');
+		await setNumber(page, '#itemsPerList', '3');
+
+		await submitForm(page);
+
+		const firstSentences = await sentencesIn(page);
+		const url = new URL(page.url());
+		const params = new URLSearchParams(url.hash.slice(1));
+
+		expect(params.get('v')).toBe('1');
+		expect(params.get('pattern')).toBe('det_noun');
+		expect(params.get('gender')).toBe('f');
+		expect(params.get('grammNumber')).toBe('s');
+		expect(params.get('listCount')).toBe('2');
+		expect(params.get('itemsPerList')).toBe('3');
+		expect(params.get('seed')).toBeTruthy();
+
+		await page.goto(url.toString());
+		await page.waitForLoadState('networkidle');
+		await expect(page.getByTestId('lists')).toBeVisible();
+
+		expect(await sentencesIn(page)).toEqual(firstSentences);
+	});
+
+	test('ignores generation URL hashes with unsupported versions', async ({ page }) => {
+		const params = new URLSearchParams({
+			v: '999',
+			balanced: '0',
+			pattern: 'det_noun',
+			detType: '',
+			gender: 'f',
+			grammNumber: 's',
+			lengthUnit: 'syllables',
+			length: '',
+			lexicalDensity: '',
+			listCount: '2',
+			itemsPerList: '3',
+			seed: 'future-version'
+		});
+
+		await page.goto(`/generate#${params.toString()}`);
+		await expect(page.locator('#pattern')).toBeVisible();
+		await expect(page.getByTestId('lists')).toHaveCount(0);
+	});
 });

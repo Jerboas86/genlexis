@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Pathname } from '$app/types';
 	import { resolve } from '$app/paths';
+	import { onMount, tick } from 'svelte';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import * as m from '$lib/paraglide/messages';
 	import { localizeHref } from '$lib/paraglide/runtime';
 	import { acceptedSummary, generate, generateBalanced } from './data.remote';
@@ -10,10 +12,31 @@
 	const MAX_NOUN_LENGTH = 20;
 	const UNBALANCED_THRESHOLD = 0.35;
 	const DEFAULT_LANGUAGE = 'fr-FR';
+	const HASH_VERSION = '1';
 
 	const summaryQuery = acceptedSummary();
 	await summaryQuery;
 	const canGenerate = $derived(summaryQuery.current?.canGenerate ?? true);
+
+	type Pattern = 'det_noun' | 'noun' | 'det_noun_adj' | 'np_verb';
+	type DetType = '' | 'definite' | 'indefinite';
+	type Gender = '' | 'm' | 'f';
+	type GrammNumber = '' | 's' | 'p';
+	type LengthUnit = 'syllables' | 'phonemes';
+	type LexicalDensity = '' | 'high' | 'medium' | 'low';
+	type GenerationHashState = {
+		balanced: boolean;
+		pattern: Pattern;
+		detType: DetType;
+		gender: Gender;
+		grammNumber: GrammNumber;
+		lengthUnit: LengthUnit;
+		length: number | '';
+		lexicalDensity: LexicalDensity;
+		listCount: number;
+		itemsPerList: number;
+		seed: string;
+	};
 
 	let pattern = $state<'det_noun' | 'noun' | 'det_noun_adj' | 'np_verb'>('det_noun');
 	let detType = $state<'' | 'definite' | 'indefinite'>('');
@@ -26,6 +49,7 @@
 	let itemsPerList = $state(10);
 	let seed = $state('');
 	let balanced = $state(false);
+	let formElement: HTMLFormElement | undefined = $state();
 
 	const activeForm = $derived(balanced ? generateBalanced : generate);
 	const balancedResult = $derived(generateBalanced.result);
@@ -45,6 +69,153 @@
 
 	let copiedIndex = $state<number | null>(null);
 	let copyResetTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	const PATTERNS: Pattern[] = ['det_noun', 'noun', 'det_noun_adj', 'np_verb'];
+	const DET_TYPES: DetType[] = ['', 'definite', 'indefinite'];
+	const GENDERS: Gender[] = ['', 'm', 'f'];
+	const GRAMM_NUMBERS: GrammNumber[] = ['', 's', 'p'];
+	const LENGTH_UNITS: LengthUnit[] = ['syllables', 'phonemes'];
+	const LEXICAL_DENSITIES: LexicalDensity[] = ['', 'high', 'medium', 'low'];
+
+	const hasDetType = (value: Pattern) =>
+		value === 'det_noun' || value === 'det_noun_adj' || value === 'np_verb';
+
+	const isOneOf = <T extends string>(value: string | null, allowed: readonly T[]): value is T =>
+		value !== null && (allowed as readonly string[]).includes(value);
+
+	const parseBoundedInteger = (value: string | null, min: number, max: number) => {
+		if (value === null) return null;
+		const number = Number(value);
+		if (!Number.isInteger(number) || number < min || number > max) return null;
+		return number;
+	};
+
+	const parseOptionalLength = (value: string | null) => {
+		if (value === null || value === '') return '';
+		return parseBoundedInteger(value, 1, MAX_NOUN_LENGTH) ?? '';
+	};
+
+	const createSeed = () => crypto.randomUUID();
+
+	const normalizedSeed = (value: string) => {
+		const trimmed = value.trim();
+		return trimmed || createSeed();
+	};
+
+	const writeSeedToInput = (value: string) => {
+		const input = formElement?.elements.namedItem('seed');
+		if (input instanceof HTMLInputElement) input.value = value;
+	};
+
+	const generationHash = (nextSeed: string) => {
+		const params = new SvelteURLSearchParams();
+		params.set('v', HASH_VERSION);
+		params.set('balanced', balanced ? '1' : '0');
+		params.set('pattern', pattern);
+		params.set('detType', hasDetType(pattern) ? detType : '');
+		params.set('gender', gender);
+		params.set('grammNumber', grammNumber);
+		params.set('lengthUnit', lengthUnit);
+		params.set('length', length === '' ? '' : String(length));
+		params.set('lexicalDensity', lexicalDensity);
+		params.set('listCount', String(listCount));
+		params.set('itemsPerList', String(itemsPerList));
+		params.set('seed', nextSeed);
+		return params.toString();
+	};
+
+	function prepareGenerationSubmit() {
+		const nextSeed = normalizedSeed(seed);
+		seed = nextSeed;
+		writeSeedToInput(nextSeed);
+
+		const hash = generationHash(nextSeed);
+		window.history.replaceState(
+			null,
+			'',
+			`${window.location.pathname}${window.location.search}#${hash}`
+		);
+	}
+
+	function parseGenerationHashV1(params: URLSearchParams): GenerationHashState | null {
+		const hashSeed = params.get('seed')?.trim();
+		const hashPattern = params.get('pattern');
+
+		if (!hashSeed || hashSeed.length > 128 || !isOneOf(hashPattern, PATTERNS)) return null;
+
+		const hashDetType = params.get('detType');
+		const hashGender = params.get('gender');
+		const hashNumber = params.get('grammNumber');
+		const hashLengthUnit = params.get('lengthUnit');
+		const hashLexicalDensity = params.get('lexicalDensity');
+		const parsedDetType = hashDetType ?? '';
+		const parsedGender = hashGender ?? '';
+		const parsedNumber = hashNumber ?? '';
+		const parsedLexicalDensity = hashLexicalDensity ?? '';
+		const hashListCount = parseBoundedInteger(params.get('listCount'), 1, MAX_LISTS);
+		const hashItemsPerList = parseBoundedInteger(params.get('itemsPerList'), 1, MAX_ITEMS_PER_LIST);
+
+		if (
+			!isOneOf(parsedDetType, DET_TYPES) ||
+			!isOneOf(parsedGender, GENDERS) ||
+			!isOneOf(parsedNumber, GRAMM_NUMBERS) ||
+			!isOneOf(hashLengthUnit, LENGTH_UNITS) ||
+			!isOneOf(parsedLexicalDensity, LEXICAL_DENSITIES) ||
+			hashListCount === null ||
+			hashItemsPerList === null
+		) {
+			return null;
+		}
+
+		return {
+			balanced: params.get('balanced') === '1',
+			pattern: hashPattern,
+			detType: hasDetType(hashPattern) ? parsedDetType : '',
+			gender: parsedGender,
+			grammNumber: parsedNumber,
+			lengthUnit: hashLengthUnit,
+			length: parseOptionalLength(params.get('length')),
+			lexicalDensity: parsedLexicalDensity,
+			listCount: hashListCount,
+			itemsPerList: hashItemsPerList,
+			seed: hashSeed
+		};
+	}
+
+	const parseGenerationHash = (hash: string): GenerationHashState | null => {
+		const params = new URLSearchParams(hash.slice(1));
+
+		switch (params.get('v')) {
+			case HASH_VERSION:
+				return parseGenerationHashV1(params);
+			default:
+				return null;
+		}
+	};
+
+	async function restoreFromHash() {
+		const restored = parseGenerationHash(window.location.hash);
+		if (!restored) return;
+
+		pattern = restored.pattern;
+		detType = restored.detType;
+		gender = restored.gender;
+		grammNumber = restored.grammNumber;
+		lengthUnit = restored.lengthUnit;
+		length = restored.length;
+		lexicalDensity = restored.lexicalDensity;
+		listCount = restored.listCount;
+		itemsPerList = restored.itemsPerList;
+		seed = restored.seed;
+		balanced = restored.balanced;
+
+		await tick();
+		formElement?.requestSubmit();
+	}
+
+	onMount(() => {
+		void restoreFromHash();
+	});
 
 	async function copyList(index: number) {
 		const text = lists[index].map((s) => s.sentence).join('\n');
@@ -75,12 +246,15 @@
 		{/if}
 
 		<form
+			bind:this={formElement}
+			onsubmitcapture={prepareGenerationSubmit}
 			{...activeForm.enhance(async ({ submit }) => {
 				await submit();
 			})}
 			class="controls"
 		>
 			<input type="hidden" name="language" value={DEFAULT_LANGUAGE} />
+			<input type="hidden" name="seed" value={seed} />
 
 			<div class="field">
 				<label for="pattern">{m.pattern_label()}</label>
@@ -177,18 +351,6 @@
 					min="1"
 					max={MAX_ITEMS_PER_LIST}
 					bind:value={itemsPerList}
-				/>
-			</div>
-
-			<div class="field">
-				<label for="seed">Seed</label>
-				<input
-					id="seed"
-					name="seed"
-					type="text"
-					placeholder="random"
-					maxlength="128"
-					bind:value={seed}
 				/>
 			</div>
 

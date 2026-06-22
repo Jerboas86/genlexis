@@ -1,0 +1,24 @@
+{
+	"name": "@genlexis/core",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./package.json": "./package.json"
+	},
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"files": ["src"],
+	"peerDependencies": {
+		"drizzle-orm": ">=0.30.0"
+	},
+	"peerDependenciesMeta": {
+		"drizzle-orm": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"drizzle-orm": "^0.45.2"
+	}
+}

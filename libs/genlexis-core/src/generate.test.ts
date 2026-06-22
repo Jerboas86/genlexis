@@ -6,18 +6,7 @@ import {
 	type AcceptedItem,
 	type FindAcceptedItemsOptions,
 	type GenlexisRepository
-} from './genlexis';
-
-vi.mock('$lib/server/db', () => ({
-	db: {
-		execute: vi.fn(),
-		insert: vi.fn(() => ({ values: vi.fn() }))
-	}
-}));
-
-vi.mock('$lib/server/db/schema', () => ({
-	generatedSentenceClassifications: {}
-}));
+} from './generate';
 
 const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisRepository => ({
 	findLeastVotedValidationCandidate: vi.fn(async () => null),

@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@genlexis/core':
+        specifier: workspace:*
+        version: link:libs/genlexis-core
     devDependencies:
       '@eslint/compat':
         specifier: ^2.1.0
@@ -95,6 +99,12 @@ importers:
       wrangler:
         specifier: ^4.94.0
         version: 4.94.0(@cloudflare/workers-types@4.20260526.1)
+
+  libs/genlexis-core:
+    devDependencies:
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@cloudflare/workers-types@4.20260526.1)(@neondatabase/serverless@1.1.0)(kysely@0.28.17)
 
 packages:
 

@@ -29,6 +29,8 @@ type LexicalEntrySpec = {
 	number?: 's' | 'p';
 	category?: string;
 	phonemeCount?: number;
+	syllableCount?: number;
+	pld20?: number;
 };
 
 type SentenceSpec = {
@@ -56,7 +58,9 @@ const lexicalEntries: LexicalEntrySpec[] = [
 		gender: 'm',
 		number: 's',
 		category: 'noun',
-		phonemeCount: FIXTURE_PHONEME_COUNT
+		phonemeCount: FIXTURE_PHONEME_COUNT,
+		syllableCount: 2,
+		pld20: 1.5
 	},
 	{
 		ref: 'noun-mp',
@@ -64,7 +68,9 @@ const lexicalEntries: LexicalEntrySpec[] = [
 		gender: 'm',
 		number: 'p',
 		category: 'noun',
-		phonemeCount: FIXTURE_PHONEME_COUNT
+		phonemeCount: FIXTURE_PHONEME_COUNT,
+		syllableCount: 3,
+		pld20: 2.5
 	},
 	{
 		ref: 'noun-fs',
@@ -72,7 +78,9 @@ const lexicalEntries: LexicalEntrySpec[] = [
 		gender: 'f',
 		number: 's',
 		category: 'noun',
-		phonemeCount: FIXTURE_PHONEME_COUNT
+		phonemeCount: FIXTURE_PHONEME_COUNT,
+		syllableCount: 2,
+		pld20: 3.5
 	},
 	{
 		ref: 'noun-fp',
@@ -80,9 +88,16 @@ const lexicalEntries: LexicalEntrySpec[] = [
 		gender: 'f',
 		number: 'p',
 		category: 'noun',
-		phonemeCount: FIXTURE_PHONEME_COUNT
+		phonemeCount: FIXTURE_PHONEME_COUNT,
+		syllableCount: 4,
+		pld20: 1.5
 	}
 ];
+
+// Distinct syllable counts and pld20 bands used by the noun fixtures above.
+// Tests combine these with FIXTURE_PHONEME_COUNT to scope to fixture rows only.
+export const FIXTURE_SYLLABLE_COUNT_SHARED = 2;
+export const FIXTURE_SYLLABLE_COUNT_UNIQUE = 4;
 
 const dn = (det: string, noun: string, detRef: string, nounRef: string): SentenceSpec => ({
 	ref: `dn-${detRef}-${nounRef}`,
@@ -132,7 +147,8 @@ export const seedE2eFixtures = async () => {
 	for (const entry of lexicalEntries) {
 		await sql`
 			INSERT INTO aud.lexical_entries (
-				language, source, source_ref, surface, gender, number, category, phoneme_count
+				language, source, source_ref, surface, gender, number, category,
+				phoneme_count, syllable_count, pld20
 			) VALUES (
 				${LANGUAGE}::aud.lang_code,
 				${SOURCE_MARKER},
@@ -141,7 +157,9 @@ export const seedE2eFixtures = async () => {
 				${entry.gender ?? null},
 				${entry.number ?? null},
 				${entry.category ?? null},
-				${entry.phonemeCount ?? null}
+				${entry.phonemeCount ?? null},
+				${entry.syllableCount ?? null},
+				${entry.pld20 ?? null}
 			)
 		`;
 	}

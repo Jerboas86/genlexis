@@ -2,7 +2,11 @@ import { expect, test, type Page } from '@playwright/test';
 import {
 	cleanupE2eFixtures,
 	FIXTURE_PHONEME_COUNT,
+	FIXTURE_SYLLABLE_COUNT_SHARED,
+	NOUN_FS,
 	NOUN_FP,
+	NOUN_MP,
+	NOUN_MS,
 	seedE2eFixtures
 } from '../../../tests/e2e/seed';
 
@@ -37,6 +41,9 @@ const tokensOf = (sentence: string) =>
 		.filter(Boolean);
 
 const listsCount = (page: Page) => page.getByTestId('list').count();
+
+const normalizedResults = async (page: Page) =>
+	(await sentencesIn(page)).map((sentence) => tokensOf(sentence).join(' ')).sort();
 
 test.describe('/generate', () => {
 	test.beforeAll(async () => {
@@ -163,6 +170,49 @@ test.describe('/generate', () => {
 		// only stores 'det_noun' patterns.
 		expect(sentences.map(tokensOf).map((tokens) => tokens.join(' '))).toEqual([NOUN_FP]);
 	});
+
+	test('syllable length filtering is preserved through the extracted repository adapter', async ({
+		page
+	}) => {
+		await goToGenerate(page);
+
+		await setSelect(page, '#pattern', 'noun');
+		await setSelect(page, '#gender', '');
+		await setSelect(page, '#grammNumber', '');
+		await setSelect(page, '#lengthUnit', 'syllables');
+		await setNumber(page, '#length', String(FIXTURE_SYLLABLE_COUNT_SHARED));
+		await setNumber(page, '#listCount', '1');
+		await setNumber(page, '#itemsPerList', '10');
+
+		await submitForm(page);
+
+		expect(await normalizedResults(page)).toEqual([NOUN_MS, NOUN_FS].sort());
+	});
+
+	for (const { density, expected } of [
+		{ density: 'high', expected: [NOUN_MS, NOUN_FP] },
+		{ density: 'medium', expected: [NOUN_MP] },
+		{ density: 'low', expected: [NOUN_FS] }
+	] as const) {
+		test(`${density} lexical-density filtering is preserved through the extracted repository adapter`, async ({
+			page
+		}) => {
+			await goToGenerate(page);
+
+			await setSelect(page, '#pattern', 'noun');
+			await setSelect(page, '#gender', '');
+			await setSelect(page, '#grammNumber', '');
+			await setSelect(page, '#lengthUnit', 'phonemes');
+			await setNumber(page, '#length', String(FIXTURE_PHONEME_COUNT));
+			await setSelect(page, '#lexicalDensity', density);
+			await setNumber(page, '#listCount', '1');
+			await setNumber(page, '#itemsPerList', '10');
+
+			await submitForm(page);
+
+			expect(await normalizedResults(page)).toEqual([...expected].sort());
+		});
+	}
 
 	test('partitions results across the requested number of lists', async ({ page }) => {
 		await goToGenerate(page);

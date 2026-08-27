@@ -16,7 +16,14 @@ const fixtureNamespace = [
 	.toLowerCase();
 
 const SOURCE_MARKER = `e2e-genlexis-test-${fixtureNamespace}`;
-const FIXTURE_SUFFIX = fixtureNamespace.replace(/-/g, '') || 'local';
+/**
+ * This worker's fixture namespace.
+ *
+ * Exported because assertions need it too: Playwright runs workers in parallel
+ * against one database, so every worker's nouns are visible to every other
+ * worker's queries. A test that asserts "exactly these nouns" has to say whose.
+ */
+export const FIXTURE_SUFFIX = fixtureNamespace.replace(/-/g, '') || 'local';
 export const FIXTURE_PHONEME_COUNT =
 	(FIXTURE_SUFFIX.split('').reduce((total, char) => total + char.charCodeAt(0), 0) %
 		MAX_FIXTURE_LENGTH) +
@@ -36,8 +43,16 @@ type LexicalEntrySpec = {
 type SentenceSpec = {
 	ref: string;
 	sentence: string;
-	pattern: 'det_noun' | 'noun';
-	tokens: { slot: 'det' | 'noun'; entryRef: string }[];
+	pattern: 'det_noun' | 'noun' | 'det_noun_adj' | 'np_verb';
+	tokens: { slot: 'det' | 'noun' | 'adj' | 'verb'; entryRef: string }[];
+	/**
+	 * A seeded LLM pass.
+	 *
+	 * `findLeastVotedValidationCandidate` only offers `det_noun_adj` and
+	 * `np_verb` once an LLM has judged them, so a fixture of those patterns
+	 * without this is invisible to the classification screen.
+	 */
+	llm?: { appropriate: boolean; grammatical: boolean | null; semantics: string | null };
 };
 
 // Made-up noun surfaces avoid clashing with real production lexicon.
@@ -45,6 +60,9 @@ export const NOUN_MS = `xetax${FIXTURE_SUFFIX}`;
 export const NOUN_MP = `xetaxs${FIXTURE_SUFFIX}`;
 export const NOUN_FS = `yutame${FIXTURE_SUFFIX}`;
 export const NOUN_FP = `yutames${FIXTURE_SUFFIX}`;
+/** The adjective and verb the two richer patterns need. */
+export const ADJ_MS = `zoripe${FIXTURE_SUFFIX}`;
+export const VERB_S = `qumibe${FIXTURE_SUFFIX}`;
 
 const lexicalEntries: LexicalEntrySpec[] = [
 	{ ref: 'det-le', surface: 'le', gender: 'm', number: 's', category: 'det' },
@@ -52,6 +70,8 @@ const lexicalEntries: LexicalEntrySpec[] = [
 	{ ref: 'det-les', surface: 'les', number: 'p', category: 'det' },
 	{ ref: 'det-un', surface: 'un', gender: 'm', number: 's', category: 'det' },
 	{ ref: 'det-une', surface: 'une', gender: 'f', number: 's', category: 'det' },
+	{ ref: 'adj-ms', surface: ADJ_MS, gender: 'm', number: 's', category: 'adj' },
+	{ ref: 'verb-s', surface: VERB_S, number: 's', category: 'verb' },
 	{
 		ref: 'noun-ms',
 		surface: NOUN_MS,
@@ -116,6 +136,34 @@ const n = (noun: string, nounRef: string): SentenceSpec => ({
 	tokens: [{ slot: 'noun', entryRef: nounRef }]
 });
 
+/** `det + noun + adj`, judged by an LLM so the classification screen offers it. */
+const dna = (): SentenceSpec => ({
+	ref: 'dna-le-ms',
+	sentence: `le ${NOUN_MS} ${ADJ_MS}`,
+	pattern: 'det_noun_adj',
+	tokens: [
+		{ slot: 'det', entryRef: 'det-le' },
+		{ slot: 'noun', entryRef: 'noun-ms' },
+		{ slot: 'adj', entryRef: 'adj-ms' }
+	],
+	// Deliberately undecided: the screen pre-fills from the LLM verdict, and a
+	// fully decided one would hide the gating this fixture exists to exercise.
+	llm: { appropriate: true, grammatical: null, semantics: null }
+});
+
+/** `det + noun + verb`, likewise. */
+const npv = (): SentenceSpec => ({
+	ref: 'npv-le-ms',
+	sentence: `le ${NOUN_MS} ${VERB_S}`,
+	pattern: 'np_verb',
+	tokens: [
+		{ slot: 'det', entryRef: 'det-le' },
+		{ slot: 'noun', entryRef: 'noun-ms' },
+		{ slot: 'verb', entryRef: 'verb-s' }
+	],
+	llm: { appropriate: true, grammatical: null, semantics: null }
+});
+
 const sentences: SentenceSpec[] = [
 	dn('le', NOUN_MS, 'det-le', 'noun-ms'),
 	dn('un', NOUN_MS, 'det-un', 'noun-ms'),
@@ -126,7 +174,9 @@ const sentences: SentenceSpec[] = [
 	n(NOUN_MS, 'noun-ms'),
 	n(NOUN_MP, 'noun-mp'),
 	n(NOUN_FS, 'noun-fs'),
-	n(NOUN_FP, 'noun-fp')
+	n(NOUN_FP, 'noun-fp'),
+	dna(),
+	npv()
 ];
 
 const requireDatabaseUrl = () => {
@@ -194,6 +244,19 @@ export const seedE2eFixtures = async () => {
 			`;
 		}
 
+		if (spec.llm) {
+			await sql`
+				INSERT INTO aud.generated_sentence_classifications (
+					sentence_id, judge_type, appropriate, grammatical, semantics, classifier_model
+				)
+				SELECT s.id, 'llm', ${spec.llm.appropriate}, ${spec.llm.grammatical},
+					${spec.llm.semantics}, ${SOURCE_MARKER}
+				FROM aud.generated_sentences s
+				WHERE s.language = ${LANGUAGE}::aud.lang_code
+					AND s.sentence = ${spec.sentence}
+			`;
+		}
+
 		// Two acceptable votes → satisfies the ≥1-vote majority-accept rule.
 		await sql`
 			INSERT INTO aud.generated_sentence_classifications (sentence_id, judge_type, overall_acceptable)
@@ -204,6 +267,35 @@ export const seedE2eFixtures = async () => {
 				AND s.sentence = ${spec.sentence}
 		`;
 	}
+};
+
+/**
+ * The highest classification id at this moment.
+ *
+ * The test database holds a real corpus, and a test that votes writes a row
+ * against one of its sentences — which shifts the `vote_count` the candidate
+ * query orders on, and so changes what every later test is offered.
+ *
+ * The id is a `bigserial`, strictly increasing and never reused, so it doubles
+ * as a clock: everything written after the mark is what this test caused.
+ * A transaction would be the usual tool and is not available here — the insert
+ * happens in the preview server's connection, not the test's.
+ *
+ * The delete below is only safe because `playwright.config.ts` pins the suite to
+ * one worker. Under parallel workers it would also remove a concurrent spec's
+ * seed rows; that config comment explains the trade.
+ */
+export const classificationHighWaterMark = async (): Promise<number> => {
+	const sql = getClient();
+	const rows =
+		await sql`SELECT COALESCE(MAX(id), 0)::int AS id FROM aud.generated_sentence_classifications`;
+	return (rows[0] as { id: number }).id;
+};
+
+/** Removes every classification written since the given mark. */
+export const rollbackClassificationsAfter = async (mark: number): Promise<void> => {
+	const sql = getClient();
+	await sql`DELETE FROM aud.generated_sentence_classifications WHERE id > ${mark}`;
 };
 
 export const cleanupE2eFixtures = async () => {

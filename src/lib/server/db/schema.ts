@@ -304,4 +304,99 @@ export const sentenceAcceptance = aud.view('sentence_acceptance', {
 		) derived
 	`);
 
+/**
+ * A draw served to a consumer, and the exact items it contained.
+ *
+ * These two tables exist so a `drawId` can be *resolved*. A consumer rotating
+ * away from its recent sessions sends only identifiers; the service is the
+ * normative authority on what those identifiers contained, because a client that
+ * has lost its local history would otherwise silently weaken the rotation.
+ *
+ * A row is never updated. A correction publishes a new draw, and the old one
+ * keeps naming exactly what it served.
+ */
+export const materialDraws = aud.table(
+	'material_draws',
+	{
+		/** Opaque, random and non-derivable — never a sequence. */
+		drawId: text('draw_id').primaryKey(),
+		protocolRevision: text('protocol_revision').notNull(),
+		materialSourceId: text('material_source_id').notNull(),
+		materialRelease: text('material_release').notNull(),
+		/**
+		 * The pool the draw ran against.
+		 *
+		 * A seed alone does not make a draw replayable: the same seed against a
+		 * changed pool produces different sentences.
+		 */
+		poolRevision: text('pool_revision').notNull(),
+		language: langCode('language').notNull(),
+		seed: text('seed').notNull(),
+		/** The generation options, as the response reported them. */
+		options: text('options').notNull(),
+		phonemeBalanceDistance: numeric('phoneme_balance_distance').notNull(),
+		/**
+		 * The tolerance this draw was judged against.
+		 *
+		 * Stored rather than read back from the registry, so a replay reports the
+		 * threshold that actually applied — a revision republished with another
+		 * one must not retroactively change what a served draw claims to have met.
+		 */
+		phonemeBalanceTolerance: numeric('phoneme_balance_tolerance').notNull(),
+		issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [index('material_draws_protocol_idx').on(t.protocolRevision, t.issuedAt)]
+);
+
+export const materialDrawItems = aud.table(
+	'material_draw_items',
+	{
+		drawId: text('draw_id')
+			.notNull()
+			.references(() => materialDraws.drawId, { onDelete: 'cascade' }),
+		position: integer('position').notNull(),
+		itemId: text('item_id').notNull(),
+		/**
+		 * Derived from the sentence text, so a correction is a new revision by
+		 * construction rather than by anyone remembering to bump a column.
+		 */
+		itemRevision: text('item_revision').notNull(),
+		sentenceId: bigint('sentence_id', { mode: 'number' }).notNull()
+	},
+	(t) => [
+		primaryKey({ columns: [t.drawId, t.position] }),
+		// The rotation resolves excluded draws to these pairs, so this is the
+		// index the exclusion query runs on.
+		index('material_draw_items_identity_idx').on(t.itemId, t.itemRevision),
+		index('material_draw_items_draw_idx').on(t.drawId)
+	]
+);
+
+/**
+ * The idempotency ledger.
+ *
+ * The fingerprint is the canonical form of the request — contract version,
+ * protocol revision, and the sorted, de-duplicated exclusions. The same key with
+ * the same fingerprint replays the stored draw; the same key with any other
+ * fingerprint is a conflict rather than a second draw.
+ *
+ * The key is an HMAC digest the consumer derives from a stable preparation
+ * identifier. It is never a session or account identifier, and nothing here ties
+ * it to a person.
+ */
+export const materialIdempotency = aud.table(
+	'material_idempotency',
+	{
+		idempotencyKey: text('idempotency_key').primaryKey(),
+		fingerprint: text('fingerprint').notNull(),
+		drawId: text('draw_id')
+			.notNull()
+			.references(() => materialDraws.drawId, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		/** Retention covers the retry, rotation and transfer windows, then lapses. */
+		expiresAt: timestamp('expires_at', { withTimezone: true }).notNull()
+	},
+	(t) => [index('material_idempotency_expiry_idx').on(t.expiresAt)]
+);
+
 export * from './auth.schema';

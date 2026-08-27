@@ -1,0 +1,24 @@
+{
+  "name": "error-balance-tolerance-exceeded",
+  "contractVersion": "1",
+  "why": "The best list found is above the protocol's phonemic tolerance.",
+  "request": {
+    "method": "POST",
+    "path": "/v1/draws",
+    "headers": {
+      "Idempotency-Key": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "body": {
+      "contractVersion": "1",
+      "protocolRevision": "genlexis-fr-np-verb-r1",
+      "idempotencyKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "excludedDrawIds": []
+    }
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "error": "balance_tolerance_exceeded"
+    }
+  }
+}

@@ -1,0 +1,423 @@
+# The Genlexis material contract, version 1.
+#
+# This document is the *only* interface shared between the Genlexis and Helixum
+# repositories. Neither the Genlexis database schema nor the TypeScript types of
+# `@genlexis/core` are part of it, and Helixum never installs the engine.
+#
+# Every structure is closed (`additionalProperties: false`). A field the schema
+# does not know is an error, not a value to ignore: an ignored field can change
+# the meaning of a request without either side noticing.
+openapi: 3.1.0
+info:
+  title: Genlexis material API
+  version: "1.0.0"
+  summary: Versioned speech material draws and their immutable audio assets.
+  description: |
+    A caller asks for a *draw* by naming a **protocol revision** — never by
+    passing clinical generation parameters. The service resolves that revision to
+    an immutable configuration (language, pattern, lexical density, item count,
+    seed policy, pool revision, phoneme tolerance, synthesis chain, masker and
+    level definition) and runs the engine against the snapshot it fixes.
+
+    A caller also passes the recent `drawId`s to exclude. An excluded draw
+    excludes **every `(itemId, itemRevision)` it contains**, not merely its
+    identifier: a new `drawId` that reused one of those stimuli would not be a
+    rotation.
+  license:
+    name: AGPL-3.0-only
+
+servers:
+  - url: https://api.genlexis.com
+    description: production
+  - url: https://api.test.genlexis.com
+    description: test
+
+security:
+  - materialAuth: []
+
+paths:
+  /v1/draws:
+    post:
+      operationId: createDraw
+      summary: Draw material for one session.
+      description: |
+        Idempotent under `idempotencyKey`. The service stores the canonical
+        fingerprint of the request — contract version, protocol revision, and the
+        sorted, de-duplicated set of excluded draw ids — beside the result. The
+        same key with the same fingerprint returns exactly the same draw; the
+        same key with any other fingerprint returns `idempotency_conflict`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DrawRequest" }
+      responses:
+        "200":
+          description: The draw for this idempotency key, replayed or freshly produced.
+          headers:
+            Cache-Control: { schema: { type: string, const: "no-store" } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Draw" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/assets/{sha256}:
+    get:
+      operationId: getAsset
+      summary: Fetch one immutable audio asset by the hash the draw announced.
+      description: |
+        Server-to-server only. The endpoint never issues a durable signed URL, a
+        redirect, or any credential a browser could use. A missing or excessive
+        `Content-Length`, an unlisted media type, a redirect, or bytes whose hash
+        does not match the path close the caller's preparation.
+      parameters:
+        - name: sha256
+          in: path
+          required: true
+          description: Lowercase hexadecimal SHA-256 of the asset bytes.
+          schema: { $ref: "#/components/schemas/Sha256" }
+      responses:
+        "200":
+          description: The asset bytes.
+          headers:
+            Content-Type:
+              required: true
+              schema: { $ref: "#/components/schemas/AssetMediaType" }
+            Content-Length:
+              required: true
+              description: Mandatory. At most `MAX_ASSET_BYTES`.
+              schema: { type: integer, minimum: 1, maximum: 8388608 }
+            ETag:
+              required: true
+              description: The quoted hex SHA-256, equal to the path segment.
+              schema: { type: string }
+            Cache-Control:
+              required: true
+              schema: { type: string, const: "private, immutable, max-age=31536000" }
+          content:
+            audio/wav:
+              schema: { type: string, format: binary }
+            audio/flac:
+              schema: { type: string, format: binary }
+            audio/mpeg:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+components:
+  securitySchemes:
+    materialAuth:
+      type: http
+      scheme: bearer
+      description: |
+        A shared secret held in the caller's secret manager, presented as a
+        bearer token and accompanied by `X-Genlexis-Timestamp` and
+        `X-Genlexis-Signature` — an HMAC-SHA-256 over the canonical request.
+        Two secrets are accepted at once so a rotation never has a gap.
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Also carried in the body as `idempotencyKey`; the two must be equal. It
+        is derived by the caller from a stable preparation identifier and must
+        never be derived from the exclusions themselves.
+      schema: { $ref: "#/components/schemas/IdempotencyKey" }
+
+  responses:
+    BadRequest:
+      description: Malformed body, unknown field, or unsupported contract version.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Missing, expired or invalid server-to-server credentials.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: No asset is stored under this hash.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: The idempotency key was reused with a different fingerprint.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unprocessable:
+      description: The request is well formed but cannot produce a draw.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    TooManyRequests:
+      description: Quota exceeded.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unavailable:
+      description: |
+        The service cannot answer. The caller must fail closed — falling back to
+        historic fixed lists would silently change the condition under test.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Sha256:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+
+    AssetMediaType:
+      type: string
+      enum: [audio/wav, audio/flac, audio/mpeg]
+
+    IdempotencyKey:
+      type: string
+      pattern: "^[0-9a-f]{64}$"
+      description: 64 lowercase hex characters — an HMAC digest, never a session id.
+
+    DrawId:
+      type: string
+      description: |
+        Opaque, random, non-derivable and stable. It is a linguistic reference —
+        Genlexis can resolve it to exact items — so it never appears in a
+        plaintext header on the Helixum side.
+      pattern: "^[0-9a-f]{32}$"
+
+    ContractVersion:
+      type: string
+      const: "1"
+
+    ProtocolRevision:
+      type: string
+      description: |
+        Names an immutable configuration. There is no implicit "latest": changing
+        the pool, the generation policy or the audio chain requires publishing a
+        new configuration and a new protocol revision before it can be asked for.
+      pattern: "^[a-z0-9][a-z0-9._-]{0,62}[a-z0-9]$"
+
+    DrawRequest:
+      type: object
+      additionalProperties: false
+      required: [contractVersion, protocolRevision, idempotencyKey, excludedDrawIds]
+      properties:
+        contractVersion: { $ref: "#/components/schemas/ContractVersion" }
+        protocolRevision: { $ref: "#/components/schemas/ProtocolRevision" }
+        idempotencyKey: { $ref: "#/components/schemas/IdempotencyKey" }
+        excludedDrawIds:
+          type: array
+          description: |
+            Recent draws of the same protocol identity. Canonicalised by the
+            service — sorted and de-duplicated — before it fingerprints them, so
+            reordering the array is not a different request.
+          maxItems: 64
+          items: { $ref: "#/components/schemas/DrawId" }
+
+    MaterialRelease:
+      type: object
+      additionalProperties: false
+      required: [sourceId, revision, poolRevision]
+      properties:
+        sourceId:
+          type: string
+          description: Stable identifier of the material source. Never a Voxa `corpusId`.
+          minLength: 1
+          maxLength: 128
+        revision:
+          type: string
+          description: Immutable release revision. A correction publishes a new one.
+          minLength: 1
+          maxLength: 64
+        poolRevision:
+          type: string
+          description: The immutable revision of the accepted pool the draw ran against.
+          minLength: 1
+          maxLength: 64
+
+    GenerationOptions:
+      type: object
+      additionalProperties: false
+      required: [pattern, lexicalDensity, itemsPerList, listCount]
+      properties:
+        pattern:
+          type: string
+          enum: [noun, det_noun, det_noun_adj, np_verb]
+        lexicalDensity:
+          type: string
+          enum: [high, medium, low]
+        itemsPerList: { type: integer, minimum: 1, maximum: 128 }
+        listCount: { type: integer, minimum: 1, maximum: 1 }
+        detType: { type: string, enum: [definite, indefinite] }
+        gender: { type: string, enum: [m, f] }
+        grammNumber: { type: string, enum: [s, p] }
+        lengthUnit: { type: string, enum: [syllables, phonemes] }
+        length: { type: integer, minimum: 1, maximum: 64 }
+
+    SynthesisProvenance:
+      type: object
+      additionalProperties: false
+      required:
+        [voice, model, modelVersion, parameters, format, sampleRate, chainId, chainVersion]
+      properties:
+        voice: { type: string, minLength: 1, maxLength: 128 }
+        model: { type: string, minLength: 1, maxLength: 128 }
+        modelVersion: { type: string, minLength: 1, maxLength: 64 }
+        parameters:
+          type: object
+          description: The exact synthesis parameters, as scalars only.
+          additionalProperties:
+            oneOf:
+              - { type: string, maxLength: 128 }
+              - { type: number }
+              - { type: boolean }
+        format: { $ref: "#/components/schemas/AssetMediaType" }
+        sampleRate: { type: integer, minimum: 8000, maximum: 192000 }
+        chainId: { type: string, minLength: 1, maxLength: 128 }
+        chainVersion: { type: string, minLength: 1, maxLength: 64 }
+
+    DrawItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, itemRevision, text, homonyms, audio]
+      properties:
+        itemId: { type: string, minLength: 1, maxLength: 128 }
+        itemRevision:
+          type: string
+          description: |
+            Changing the text, the bytes or the metadata of an item creates a new
+            revision. It never retroactively changes a release that cites the old
+            one.
+          minLength: 1
+          maxLength: 64
+        text: { type: string, minLength: 1, maxLength: 512 }
+        homonyms:
+          type: array
+          maxItems: 32
+          items: { type: string, minLength: 1, maxLength: 128 }
+        audio:
+          type: object
+          additionalProperties: false
+          required: [sha256, byteLength, activeSpeechRmsDbfs, synthesis]
+          properties:
+            sha256: { $ref: "#/components/schemas/Sha256" }
+            byteLength: { type: integer, minimum: 1, maximum: 8388608 }
+            activeSpeechRmsDbfs: { type: number, minimum: -120, maximum: 0 }
+            synthesis: { $ref: "#/components/schemas/SynthesisProvenance" }
+
+    Masker:
+      type: object
+      additionalProperties: false
+      required:
+        [maskerId, revision, sha256, rmsDbfs, ltasSource, measurementChainId, measurementChainVersion, recipe]
+      properties:
+        maskerId: { type: string, minLength: 1, maxLength: 128 }
+        revision: { type: string, minLength: 1, maxLength: 64 }
+        sha256:
+          description: Present when the masker is materialised; `null` when it is a recipe.
+          oneOf:
+            - { $ref: "#/components/schemas/Sha256" }
+            - { type: "null" }
+        rmsDbfs: { type: number, minimum: -120, maximum: 0 }
+        ltasSource: { type: string, minLength: 1, maxLength: 128 }
+        measurementChainId: { type: string, minLength: 1, maxLength: 128 }
+        measurementChainVersion: { type: string, minLength: 1, maxLength: 64 }
+        recipe:
+          description: A reproducible recipe when the masker is not materialised.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [kind, shaping, seed]
+              properties:
+                kind: { type: string, enum: [stationary_ltass] }
+                shaping: { type: string, enum: [corpus_ltas, generic_ltass] }
+                seed: { type: string, minLength: 1, maxLength: 128 }
+            - { type: "null" }
+
+    GainRule:
+      type: object
+      additionalProperties: false
+      required: [kind, speechLevelMetric, maskerLevelMetric, referenceDbfs]
+      description: |
+        How the SNR is realised at the output of the graph. Helixum compiles this
+        and tests it against reference audio vectors.
+      properties:
+        kind: { type: string, enum: [fixed_speech_variable_masker] }
+        speechLevelMetric: { type: string, enum: [active_speech_rms_dbfs] }
+        maskerLevelMetric: { type: string, enum: [rms_dbfs] }
+        referenceDbfs: { type: number, minimum: -120, maximum: 0 }
+
+    Draw:
+      type: object
+      additionalProperties: false
+      required:
+        [contractVersion, drawId, protocolRevision, materialRelease, language,
+         generation, items, masker, gainRule, issuedAt]
+      properties:
+        contractVersion: { $ref: "#/components/schemas/ContractVersion" }
+        drawId: { $ref: "#/components/schemas/DrawId" }
+        protocolRevision: { $ref: "#/components/schemas/ProtocolRevision" }
+        materialRelease: { $ref: "#/components/schemas/MaterialRelease" }
+        language: { type: string, minLength: 2, maxLength: 16 }
+        generation:
+          type: object
+          additionalProperties: false
+          required: [seed, options, phonemeBalanceDistance, phonemeBalanceTolerance]
+          properties:
+            seed: { type: string, minLength: 1, maxLength: 128 }
+            options: { $ref: "#/components/schemas/GenerationOptions" }
+            phonemeBalanceDistance: { type: number, minimum: 0 }
+            phonemeBalanceTolerance: { type: number, minimum: 0 }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 128
+          items: { $ref: "#/components/schemas/DrawItem" }
+        masker: { $ref: "#/components/schemas/Masker" }
+        gainRule: { $ref: "#/components/schemas/GainRule" }
+        issuedAt:
+          type: integer
+          description: Epoch milliseconds.
+          minimum: 0
+
+    ErrorCode:
+      type: string
+      enum:
+        - unsupported_contract_version
+        - invalid_request
+        - unauthorized
+        - idempotency_conflict
+        - unknown_protocol_revision
+        - unknown_pool_revision
+        - corpus_unavailable
+        - pool_exhausted
+        - balance_tolerance_exceeded
+        - incomplete_draw
+        - asset_integrity_error
+        - asset_not_found
+        - quota_exceeded
+        - service_unavailable
+
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error: { $ref: "#/components/schemas/ErrorCode" }
+        message:
+          type: string
+          description: |
+            Human-readable and non-normative. It never repeats the full exclusion
+            list or the idempotency key.
+          maxLength: 512

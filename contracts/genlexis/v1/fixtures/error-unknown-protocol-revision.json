@@ -1,0 +1,24 @@
+{
+  "name": "error-unknown-protocol-revision",
+  "contractVersion": "1",
+  "why": "There is no implicit 'latest'; an unpublished revision is refused.",
+  "request": {
+    "method": "POST",
+    "path": "/v1/draws",
+    "headers": {
+      "Idempotency-Key": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "body": {
+      "contractVersion": "1",
+      "protocolRevision": "never-published",
+      "idempotencyKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "excludedDrawIds": []
+    }
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "error": "unknown_protocol_revision"
+    }
+  }
+}

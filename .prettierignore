@@ -11,3 +11,8 @@ bun.lockb
 
 # Generated
 worker-configuration.d.ts
+
+# The Genlexis material contract is a mirrored artifact: it must stay
+# byte-identical to the copy in the Helixum repository, and its recorded hash is
+# what proves it. Reformatting it here would silently break that.
+contracts/

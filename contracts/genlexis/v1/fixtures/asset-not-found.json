@@ -1,0 +1,16 @@
+{
+  "name": "asset-not-found",
+  "contractVersion": "1",
+  "why": "A hash the service does not hold is a closed error, not an empty body.",
+  "request": {
+    "method": "GET",
+    "path": "/v1/assets/0000000000000000000000000000000000000000000000000000000000000000",
+    "headers": {}
+  },
+  "response": {
+    "status": 404,
+    "body": {
+      "error": "asset_not_found"
+    }
+  }
+}

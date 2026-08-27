@@ -1,0 +1,24 @@
+{
+  "name": "error-unknown-pool-revision",
+  "contractVersion": "1",
+  "why": "The configuration names a pool revision the service no longer holds.",
+  "request": {
+    "method": "POST",
+    "path": "/v1/draws",
+    "headers": {
+      "Idempotency-Key": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "body": {
+      "contractVersion": "1",
+      "protocolRevision": "genlexis-fr-np-verb-r1",
+      "idempotencyKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "excludedDrawIds": []
+    }
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "error": "unknown_pool_revision"
+    }
+  }
+}

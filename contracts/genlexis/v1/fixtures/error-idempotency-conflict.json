@@ -1,0 +1,26 @@
+{
+  "name": "error-idempotency-conflict",
+  "contractVersion": "1",
+  "why": "Same key, different canonical fingerprint.",
+  "request": {
+    "method": "POST",
+    "path": "/v1/draws",
+    "headers": {
+      "Idempotency-Key": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "body": {
+      "contractVersion": "1",
+      "protocolRevision": "genlexis-fr-np-verb-r1",
+      "idempotencyKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "excludedDrawIds": [
+        "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      ]
+    }
+  },
+  "response": {
+    "status": 409,
+    "body": {
+      "error": "idempotency_conflict"
+    }
+  }
+}

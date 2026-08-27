@@ -1,0 +1,20 @@
+{
+  "name": "asset-success",
+  "contractVersion": "1",
+  "why": "The asset is addressed by the hash the draw announced; the ETag repeats it.",
+  "request": {
+    "method": "GET",
+    "path": "/v1/assets/30bd1afe98911f02cd1a3b9d16f6556d1521173366e3cdf5281c03bbd9e40eee",
+    "headers": {}
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "audio/wav",
+      "Content-Length": "48001",
+      "ETag": "\"30bd1afe98911f02cd1a3b9d16f6556d1521173366e3cdf5281c03bbd9e40eee\"",
+      "Cache-Control": "private, immutable, max-age=31536000"
+    },
+    "bodySha256": "30bd1afe98911f02cd1a3b9d16f6556d1521173366e3cdf5281c03bbd9e40eee"
+  }
+}

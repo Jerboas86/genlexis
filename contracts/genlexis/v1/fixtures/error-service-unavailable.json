@@ -1,0 +1,24 @@
+{
+  "name": "error-service-unavailable",
+  "contractVersion": "1",
+  "why": "The caller must fail closed. A Genlexis outage may never trigger the legacy fixed lists.",
+  "request": {
+    "method": "POST",
+    "path": "/v1/draws",
+    "headers": {
+      "Idempotency-Key": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "body": {
+      "contractVersion": "1",
+      "protocolRevision": "genlexis-fr-np-verb-r1",
+      "idempotencyKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "excludedDrawIds": []
+    }
+  },
+  "response": {
+    "status": 503,
+    "body": {
+      "error": "service_unavailable"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "contractVersion": "1",
+  "maxAssetBytes": 8388608,
+  "maxDrawBytes": 67108864,
+  "maxItemsPerDraw": 128,
+  "maxExcludedDrawIds": 64,
+  "assetMediaTypes": ["audio/wav", "audio/flac", "audio/mpeg"],
+  "drawTimeoutMs": 20000,
+  "assetTimeoutMs": 30000,
+  "maxDrawAttempts": 3,
+  "maxAssetAttempts": 3,
+  "transferWindowDays": 90,
+  "idempotencyRetentionDays": 90
+}

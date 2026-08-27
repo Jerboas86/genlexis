@@ -1,0 +1,86 @@
+{
+  "contractVersion": "1",
+  "contractHash": "08067625e3795de02628859bf9fda3480e2178b1b969c5a9df1ad1b5f7a74f97",
+  "files": [
+    {
+      "file": "openapi.yaml",
+      "sha256": "43521624b666e96c09ec0db8051c15d92eb61888ee67fb27357fc8596436ba0a"
+    },
+    {
+      "file": "limits.json",
+      "sha256": "ab526f6a60f2f88c0293b883d3a8b235b8452a4daeef16d760ce8a99c6b5aa5f"
+    },
+    {
+      "file": "fixtures/asset-not-found.json",
+      "sha256": "3fb7d640adac6bde5060c5cb9fa47a3a4dc5d41d3662bd8b1514a7e400fdb449"
+    },
+    {
+      "file": "fixtures/asset-success.json",
+      "sha256": "80e1307fe0183d48a90fa5f1879c4f3ceacf246579216165ed7e4bc7c6a6bcec"
+    },
+    {
+      "file": "fixtures/draw-excluded-draw-id.json",
+      "sha256": "f3e0d1b6f11e5d54ec00fa44e3cc1a4d34c92c06f9737eb784760198f18c0ef2"
+    },
+    {
+      "file": "fixtures/draw-overlapping-item.json",
+      "sha256": "fa5d6200937cf1336111208c699354221eed2357711570f55ff8cb2af290c96c"
+    },
+    {
+      "file": "fixtures/draw-success-maximal.json",
+      "sha256": "bc682598d20f578c67bb5a4b7976df7d2b57e0366de4859a7cacf6d413368ba4"
+    },
+    {
+      "file": "fixtures/draw-success-minimal.json",
+      "sha256": "2a6da2477b6c0bfaeee01fce9ba569fd03dd2b3ab95152427b3ac180bc9c2d61"
+    },
+    {
+      "file": "fixtures/error-balance-tolerance-exceeded.json",
+      "sha256": "1ab54c3cdfaa50b915e0cf2898c30c216dd8bf6dfe4b9ee5945e109270a1e732"
+    },
+    {
+      "file": "fixtures/error-corpus-unavailable.json",
+      "sha256": "51d110e820648b66b937438fdb1426c5da88ff294609e369a95aae4d35b7ff88"
+    },
+    {
+      "file": "fixtures/error-duplicate-exclusions-are-canonical.json",
+      "sha256": "b329f7c0e64c815a676cd2231a03e04393b7f860eb36e5cb81bea64e40e199f2"
+    },
+    {
+      "file": "fixtures/error-idempotency-conflict.json",
+      "sha256": "0e4916e8c15f2e658fb8738e51e983c426fc0be2a5c59db67a19d95e3a6a92ae"
+    },
+    {
+      "file": "fixtures/error-incomplete-draw.json",
+      "sha256": "366fbc7a37bc94f008c2964a4fc364ecdb0b19b742f352dcdd6e371f76ef79dc"
+    },
+    {
+      "file": "fixtures/error-pool-exhausted.json",
+      "sha256": "4c5b5f2acc1bc24089d112d70911dd5f4a1219688005a06ad16d0240e7e10f55"
+    },
+    {
+      "file": "fixtures/error-service-unavailable.json",
+      "sha256": "3f16e18473f8269b5011bdb40b90484746ddaac9ea1f5c31f35b1508c54302b1"
+    },
+    {
+      "file": "fixtures/error-unauthorized.json",
+      "sha256": "0d76dfc526610e4431b1c694d9d75bc3a72ef3f38b59fce193d14df4019afb6b"
+    },
+    {
+      "file": "fixtures/error-unknown-field.json",
+      "sha256": "00e12d68db32000956ac17fd58933a4f1f45c038c7cd2d4f6157001eefda6890"
+    },
+    {
+      "file": "fixtures/error-unknown-pool-revision.json",
+      "sha256": "d5f16b85e774064740f3dd453a163f78676a2cb854b5f9cbe8ceeaf8b75f1501"
+    },
+    {
+      "file": "fixtures/error-unknown-protocol-revision.json",
+      "sha256": "0b54009eb7ed5dab2ad1c0522a46630e5638e590d90eb75789c5ed27e747a681"
+    },
+    {
+      "file": "fixtures/error-unsupported-contract-version.json",
+      "sha256": "baf4a744c9d383757870722d1e5616293bd5c395768bc8a6381f4f649c8f5907"
+    }
+  ]
+}

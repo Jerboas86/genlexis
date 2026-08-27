@@ -1,14 +1,12 @@
 import { selectBalancedLists } from './phonemes/balancer.js';
 import { addCounts, tokensToCounts } from './phonemes/distribution.js';
 import { createIpaTokenizer } from './phonemes/tokenizer.js';
-import type { PhonemeCounts, PhonemeDistribution, PooledWord } from './phonemes/types.js';
+import type { PhonemeCounts, PooledWord } from './phonemes/types.js';
 import type {
 	AcceptedItem,
 	AcceptedItemWithIpa,
 	AcceptedSentence,
 	BalancedGenerateResult,
-	FindAcceptedItemsOptions,
-	FindAcceptedItemsWithIpaOptions,
 	GenerateBalancedOptions,
 	GenerateOptions,
 	GenerateResult,

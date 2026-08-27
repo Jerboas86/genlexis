@@ -8,8 +8,9 @@ import {
 } from '@genlexis/core';
 import { repository } from './repository';
 
-export const generateAcceptedSentences = (options: Parameters<typeof _generateAcceptedSentences>[0]) =>
-	_generateAcceptedSentences(options, repository);
+export const generateAcceptedSentences = (
+	options: Parameters<typeof _generateAcceptedSentences>[0]
+) => _generateAcceptedSentences(options, repository);
 
 export const generateBalancedAcceptedSentences = (
 	options: Parameters<typeof _generateBalancedAcceptedSentences>[0]
@@ -20,10 +21,8 @@ export const getAcceptedSentenceCount = () => _getAcceptedSentenceCount(reposito
 export const getValidationCandidate = (pattern?: Parameters<typeof _getValidationCandidate>[0]) =>
 	_getValidationCandidate(pattern, repository);
 
-export const recordValidation = (
-	sentenceId: number,
-	isCorrect: boolean
-) => _recordValidation(sentenceId, isCorrect, repository);
+export const recordValidation = (sentenceId: number, isCorrect: boolean) =>
+	_recordValidation(sentenceId, isCorrect, repository);
 
 export const recordHumanClassification = (
 	sentenceId: number,

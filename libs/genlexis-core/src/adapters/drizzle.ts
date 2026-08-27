@@ -12,11 +12,21 @@ import type {
 	PatternSpec
 } from '../types.js';
 
+/**
+ * The narrow slice of a Drizzle client this adapter needs.
+ *
+ * Structural rather than nominal on purpose: the host supplies its own client,
+ * and `drizzle-orm` is an optional peer at `>=0.30.0`, so naming a concrete
+ * class here would tie the adapter to one version of it.
+ *
+ * The statement is typed as `SQL` rather than left open. Every query this file
+ * hands to `execute` is built by the `sql` tag above, and the same `SQL` type
+ * already appears throughout — so an open type bought no decoupling that the
+ * rest of the file had not already spent.
+ */
 type DrizzleDb = {
-	// drizzle's execute signature uses its own SQL type; using `any` here keeps the
-	// adapter decoupled from the host's specific drizzle-orm version.
 	execute: <T extends Record<string, unknown> = Record<string, unknown>>(
-		statement: any
+		statement: SQL
 	) => Promise<{ rows: T[] }>;
 };
 

@@ -16,3 +16,6 @@ worker-configuration.d.ts
 # byte-identical to the copy in the Helixum repository, and its recorded hash is
 # what proves it. Reformatting it here would silently break that.
 contracts/
+
+# Build output: formatting generated declarations reports on tsc, not on anyone.
+libs/*/dist

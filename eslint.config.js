@@ -12,7 +12,10 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
-	{ ignores: ['worker-configuration.d.ts'] },
+	// `includeIgnoreFile` reads the root .gitignore only, so a package-level one
+	// does not reach here. `dist` is build output: linting generated declarations
+	// reports on `tsc`'s choices rather than on anything anyone wrote.
+	{ ignores: ['worker-configuration.d.ts', 'libs/*/dist'] },
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,

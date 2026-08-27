@@ -7,17 +7,25 @@
 # Every structure is closed (`additionalProperties: false`). A field the schema
 # does not know is an error, not a value to ignore: an ignored field can change
 # the meaning of a request without either side noticing.
+#
+# **Genlexis delivers linguistic material, not audio.** It says which sentences,
+# drawn from which pool, under which seed. Turning those into sound — synthesis,
+# level measurement, the masker and the gain rule that realises the SNR — belongs
+# to the audio chain, and the immutable, hash-verified assets that a clinical
+# record can cite by bytes are Voxa's job. Building a second, transitional asset
+# pipeline here would be throwaway infrastructure for material that, by
+# `genlexis-helixum-consumption.md` §7.5, never anchors a longitudinal curve.
 openapi: 3.1.0
 info:
   title: Genlexis material API
   version: "1.0.0"
-  summary: Versioned speech material draws and their immutable audio assets.
+  summary: Versioned speech material draws.
   description: |
     A caller asks for a *draw* by naming a **protocol revision** — never by
     passing clinical generation parameters. The service resolves that revision to
     an immutable configuration (language, pattern, lexical density, item count,
-    seed policy, pool revision, phoneme tolerance, synthesis chain, masker and
-    level definition) and runs the engine against the snapshot it fixes.
+    seed policy, pool revision, phoneme tolerance) and runs the engine against
+    the snapshot it fixes.
 
     A caller also passes the recent `drawId`s to exclude. An excluded draw
     excludes **every `(itemId, itemRevision)` it contains**, not merely its
@@ -68,51 +76,6 @@ paths:
         "429": { $ref: "#/components/responses/TooManyRequests" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
-  /v1/assets/{sha256}:
-    get:
-      operationId: getAsset
-      summary: Fetch one immutable audio asset by the hash the draw announced.
-      description: |
-        Server-to-server only. The endpoint never issues a durable signed URL, a
-        redirect, or any credential a browser could use. A missing or excessive
-        `Content-Length`, an unlisted media type, a redirect, or bytes whose hash
-        does not match the path close the caller's preparation.
-      parameters:
-        - name: sha256
-          in: path
-          required: true
-          description: Lowercase hexadecimal SHA-256 of the asset bytes.
-          schema: { $ref: "#/components/schemas/Sha256" }
-      responses:
-        "200":
-          description: The asset bytes.
-          headers:
-            Content-Type:
-              required: true
-              schema: { $ref: "#/components/schemas/AssetMediaType" }
-            Content-Length:
-              required: true
-              description: Mandatory. At most `MAX_ASSET_BYTES`.
-              schema: { type: integer, minimum: 1, maximum: 8388608 }
-            ETag:
-              required: true
-              description: The quoted hex SHA-256, equal to the path segment.
-              schema: { type: string }
-            Cache-Control:
-              required: true
-              schema: { type: string, const: "private, immutable, max-age=31536000" }
-          content:
-            audio/wav:
-              schema: { type: string, format: binary }
-            audio/flac:
-              schema: { type: string, format: binary }
-            audio/mpeg:
-              schema: { type: string, format: binary }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "404": { $ref: "#/components/responses/NotFound" }
-        "429": { $ref: "#/components/responses/TooManyRequests" }
-        "503": { $ref: "#/components/responses/Unavailable" }
-
 components:
   securitySchemes:
     materialAuth:
@@ -146,11 +109,6 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
-    NotFound:
-      description: No asset is stored under this hash.
-      content:
-        application/json:
-          schema: { $ref: "#/components/schemas/Error" }
     Conflict:
       description: The idempotency key was reused with a different fingerprint.
       content:
@@ -175,14 +133,6 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
-    Sha256:
-      type: string
-      pattern: "^[0-9a-f]{64}$"
-
-    AssetMediaType:
-      type: string
-      enum: [audio/wav, audio/flac, audio/mpeg]
-
     IdempotencyKey:
       type: string
       pattern: "^[0-9a-f]{64}$"
@@ -204,8 +154,8 @@ components:
       type: string
       description: |
         Names an immutable configuration. There is no implicit "latest": changing
-        the pool, the generation policy or the audio chain requires publishing a
-        new configuration and a new protocol revision before it can be asked for.
+        the pool or the generation policy requires publishing a new configuration
+        and a new protocol revision before it can be asked for.
       pattern: "^[a-z0-9][a-z0-9._-]{0,62}[a-z0-9]$"
 
     DrawRequest:
@@ -242,7 +192,10 @@ components:
           maxLength: 64
         poolRevision:
           type: string
-          description: The immutable revision of the accepted pool the draw ran against.
+          description: |
+            The immutable revision of the accepted pool the draw ran against.
+            A seed alone does not make a draw replayable: the same seed against a
+            changed pool produces different sentences.
           minLength: 1
           maxLength: 64
 
@@ -265,40 +218,17 @@ components:
         lengthUnit: { type: string, enum: [syllables, phonemes] }
         length: { type: integer, minimum: 1, maximum: 64 }
 
-    SynthesisProvenance:
-      type: object
-      additionalProperties: false
-      required:
-        [voice, model, modelVersion, parameters, format, sampleRate, chainId, chainVersion]
-      properties:
-        voice: { type: string, minLength: 1, maxLength: 128 }
-        model: { type: string, minLength: 1, maxLength: 128 }
-        modelVersion: { type: string, minLength: 1, maxLength: 64 }
-        parameters:
-          type: object
-          description: The exact synthesis parameters, as scalars only.
-          additionalProperties:
-            oneOf:
-              - { type: string, maxLength: 128 }
-              - { type: number }
-              - { type: boolean }
-        format: { $ref: "#/components/schemas/AssetMediaType" }
-        sampleRate: { type: integer, minimum: 8000, maximum: 192000 }
-        chainId: { type: string, minLength: 1, maxLength: 128 }
-        chainVersion: { type: string, minLength: 1, maxLength: 64 }
-
     DrawItem:
       type: object
       additionalProperties: false
-      required: [itemId, itemRevision, text, homonyms, audio]
+      required: [itemId, itemRevision, text, homonyms]
       properties:
         itemId: { type: string, minLength: 1, maxLength: 128 }
         itemRevision:
           type: string
           description: |
-            Changing the text, the bytes or the metadata of an item creates a new
-            revision. It never retroactively changes a release that cites the old
-            one.
+            Changing the text or the metadata of an item creates a new revision.
+            It never retroactively changes a release that cites the old one.
           minLength: 1
           maxLength: 64
         text: { type: string, minLength: 1, maxLength: 512 }
@@ -306,86 +236,35 @@ components:
           type: array
           maxItems: 32
           items: { type: string, minLength: 1, maxLength: 128 }
-        audio:
-          type: object
-          additionalProperties: false
-          required: [sha256, byteLength, activeSpeechRmsDbfs, synthesis]
-          properties:
-            sha256: { $ref: "#/components/schemas/Sha256" }
-            byteLength: { type: integer, minimum: 1, maximum: 8388608 }
-            activeSpeechRmsDbfs: { type: number, minimum: -120, maximum: 0 }
-            synthesis: { $ref: "#/components/schemas/SynthesisProvenance" }
 
-    Masker:
+    DrawGeneration:
       type: object
       additionalProperties: false
-      required:
-        [maskerId, revision, sha256, rmsDbfs, ltasSource, measurementChainId, measurementChainVersion, recipe]
+      required: [seed, options, phonemeBalanceDistance, phonemeBalanceTolerance]
       properties:
-        maskerId: { type: string, minLength: 1, maxLength: 128 }
-        revision: { type: string, minLength: 1, maxLength: 64 }
-        sha256:
-          description: Present when the masker is materialised; `null` when it is a recipe.
-          oneOf:
-            - { $ref: "#/components/schemas/Sha256" }
-            - { type: "null" }
-        rmsDbfs: { type: number, minimum: -120, maximum: 0 }
-        ltasSource: { type: string, minLength: 1, maxLength: 128 }
-        measurementChainId: { type: string, minLength: 1, maxLength: 128 }
-        measurementChainVersion: { type: string, minLength: 1, maxLength: 64 }
-        recipe:
-          description: A reproducible recipe when the masker is not materialised.
-          oneOf:
-            - type: object
-              additionalProperties: false
-              required: [kind, shaping, seed]
-              properties:
-                kind: { type: string, enum: [stationary_ltass] }
-                shaping: { type: string, enum: [corpus_ltas, generic_ltass] }
-                seed: { type: string, minLength: 1, maxLength: 128 }
-            - { type: "null" }
-
-    GainRule:
-      type: object
-      additionalProperties: false
-      required: [kind, speechLevelMetric, maskerLevelMetric, referenceDbfs]
-      description: |
-        How the SNR is realised at the output of the graph. Helixum compiles this
-        and tests it against reference audio vectors.
-      properties:
-        kind: { type: string, enum: [fixed_speech_variable_masker] }
-        speechLevelMetric: { type: string, enum: [active_speech_rms_dbfs] }
-        maskerLevelMetric: { type: string, enum: [rms_dbfs] }
-        referenceDbfs: { type: number, minimum: -120, maximum: 0 }
+        seed: { type: string, minLength: 1, maxLength: 128 }
+        options: { $ref: "#/components/schemas/GenerationOptions" }
+        phonemeBalanceDistance: { type: number, minimum: 0 }
+        phonemeBalanceTolerance: { type: number, minimum: 0 }
 
     Draw:
       type: object
       additionalProperties: false
       required:
         [contractVersion, drawId, protocolRevision, materialRelease, language,
-         generation, items, masker, gainRule, issuedAt]
+         generation, items, issuedAt]
       properties:
         contractVersion: { $ref: "#/components/schemas/ContractVersion" }
         drawId: { $ref: "#/components/schemas/DrawId" }
         protocolRevision: { $ref: "#/components/schemas/ProtocolRevision" }
         materialRelease: { $ref: "#/components/schemas/MaterialRelease" }
         language: { type: string, minLength: 2, maxLength: 16 }
-        generation:
-          type: object
-          additionalProperties: false
-          required: [seed, options, phonemeBalanceDistance, phonemeBalanceTolerance]
-          properties:
-            seed: { type: string, minLength: 1, maxLength: 128 }
-            options: { $ref: "#/components/schemas/GenerationOptions" }
-            phonemeBalanceDistance: { type: number, minimum: 0 }
-            phonemeBalanceTolerance: { type: number, minimum: 0 }
+        generation: { $ref: "#/components/schemas/DrawGeneration" }
         items:
           type: array
           minItems: 1
           maxItems: 128
           items: { $ref: "#/components/schemas/DrawItem" }
-        masker: { $ref: "#/components/schemas/Masker" }
-        gainRule: { $ref: "#/components/schemas/GainRule" }
         issuedAt:
           type: integer
           description: Epoch milliseconds.
@@ -404,8 +283,6 @@ components:
         - pool_exhausted
         - balance_tolerance_exceeded
         - incomplete_draw
-        - asset_integrity_error
-        - asset_not_found
         - quota_exceeded
         - service_unavailable
 

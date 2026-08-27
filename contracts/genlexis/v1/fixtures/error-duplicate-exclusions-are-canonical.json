@@ -1,7 +1,7 @@
 {
   "name": "error-duplicate-exclusions-are-canonical",
   "contractVersion": "1",
-  "why": "Sorting and de-duplicating the exclusions does not change the fingerprint, so this repeats draw-success-minimal's result under the same key.",
+  "why": "Sorting and de-duplicating the exclusions does not change the fingerprint, so this repeats draw-excluded-draw-id's result under the same key.",
   "request": {
     "method": "POST",
     "path": "/v1/draws",
@@ -46,43 +46,9 @@
           "itemId": "item-007",
           "itemRevision": "r1",
           "text": "La phrase numéro 7",
-          "homonyms": [],
-          "audio": {
-            "sha256": "91ab61ff991bba76ccbf1e2dc0f75dcd465b85f202219cc3f15b79cd0364eb0d",
-            "byteLength": 48007,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         }
       ],
-      "masker": {
-        "maskerId": "ltass-fr",
-        "revision": "1",
-        "sha256": "f8877bdc9621d64fece5c4d3cdd667587e5825828cc2d743d6b0cfa0c4497b93",
-        "rmsDbfs": -26.0,
-        "ltasSource": "genlexis-fr@pool-2026-07-30",
-        "measurementChainId": "genlexis-metrics",
-        "measurementChainVersion": "1.0.0",
-        "recipe": null
-      },
-      "gainRule": {
-        "kind": "fixed_speech_variable_masker",
-        "speechLevelMetric": "active_speech_rms_dbfs",
-        "maskerLevelMetric": "rms_dbfs",
-        "referenceDbfs": -23.0
-      },
       "issuedAt": 1756300000000
     }
   }

@@ -113,499 +113,123 @@
           "itemId": "item-001",
           "itemRevision": "r1",
           "text": "La phrase numéro 1",
-          "homonyms": [],
-          "audio": {
-            "sha256": "30bd1afe98911f02cd1a3b9d16f6556d1521173366e3cdf5281c03bbd9e40eee",
-            "byteLength": 48001,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-002",
           "itemRevision": "r1",
           "text": "La phrase numéro 2",
-          "homonyms": [],
-          "audio": {
-            "sha256": "a3ae621b7fcb8c4a88383fd4d5f8c1ee4137a429f11ece5455d423d8e6a31068",
-            "byteLength": 48002,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-003",
           "itemRevision": "r1",
           "text": "La phrase numéro 3",
-          "homonyms": [],
-          "audio": {
-            "sha256": "3e0f1a728b4daa3308e35914ac0698a16bdfcde3f7f01fc44311ee6aa36252d1",
-            "byteLength": 48003,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-004",
           "itemRevision": "r1",
           "text": "La phrase numéro 4",
-          "homonyms": [],
-          "audio": {
-            "sha256": "a78ac4a5d7ad8366ff9bf312c6766364d9e7d781d0fe2b08a0962ca2b5564a80",
-            "byteLength": 48004,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-005",
           "itemRevision": "r1",
           "text": "La phrase numéro 5",
-          "homonyms": [],
-          "audio": {
-            "sha256": "c3a00c2355b6889bcf6791470e195db15abb9e9a69a6a23a4563125c61be3316",
-            "byteLength": 48005,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-006",
           "itemRevision": "r1",
           "text": "La phrase numéro 6",
-          "homonyms": [],
-          "audio": {
-            "sha256": "82b57af67758822e15515ef84c6c1de1336e735417cff6b0bc739966e673d607",
-            "byteLength": 48006,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-007",
           "itemRevision": "r1",
           "text": "La phrase numéro 7",
-          "homonyms": [],
-          "audio": {
-            "sha256": "91ab61ff991bba76ccbf1e2dc0f75dcd465b85f202219cc3f15b79cd0364eb0d",
-            "byteLength": 48007,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-008",
           "itemRevision": "r1",
           "text": "La phrase numéro 8",
-          "homonyms": [],
-          "audio": {
-            "sha256": "0d491b9d2d4f362f6f8ddfb7ece61bad6d9a5260525071ead9e4dc1f10cef5c6",
-            "byteLength": 48008,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-009",
           "itemRevision": "r1",
           "text": "La phrase numéro 9",
-          "homonyms": [],
-          "audio": {
-            "sha256": "94772e0ac85778e9bf36f72457d896ed272002f7e35269dd9163427501b52b3d",
-            "byteLength": 48009,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-010",
           "itemRevision": "r1",
           "text": "La phrase numéro 10",
-          "homonyms": [],
-          "audio": {
-            "sha256": "58e3c20fa432bc6587e19870ba8884e6bed7b5722bd8693a626165b280057378",
-            "byteLength": 48010,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-011",
           "itemRevision": "r1",
           "text": "La phrase numéro 11",
-          "homonyms": [],
-          "audio": {
-            "sha256": "c7c5ce50bcd590955d0f8c2cc53f5556dae0b32c360c27a0bcfcc8176f1d1e95",
-            "byteLength": 48011,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-012",
           "itemRevision": "r1",
           "text": "La phrase numéro 12",
-          "homonyms": [],
-          "audio": {
-            "sha256": "fd9b7123eef9196b884554942feac2f164eff20d6006acd340320a69129394c6",
-            "byteLength": 48012,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-013",
           "itemRevision": "r1",
           "text": "La phrase numéro 13",
-          "homonyms": [],
-          "audio": {
-            "sha256": "3c9f66357950b31c88cb21ff3f07fcd59cb522d4187d5de255f169b68265480f",
-            "byteLength": 48013,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-014",
           "itemRevision": "r1",
           "text": "La phrase numéro 14",
-          "homonyms": [],
-          "audio": {
-            "sha256": "8b2cf52d8cb9d6cd5d4787da75e8b525735f94dca5fc8a34169e9219f9a7e017",
-            "byteLength": 48014,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-015",
           "itemRevision": "r1",
           "text": "La phrase numéro 15",
-          "homonyms": [],
-          "audio": {
-            "sha256": "57e8b1cee04a0dbce8ad7da0afe2fce5d5fdda352f55ed643667cb7870febcb0",
-            "byteLength": 48015,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-016",
           "itemRevision": "r1",
           "text": "La phrase numéro 16",
-          "homonyms": [],
-          "audio": {
-            "sha256": "320d0afc133e4d7618ea7cdc0d95ee9706f1e7dac64a3cca2bf103e9a0de2412",
-            "byteLength": 48016,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-017",
           "itemRevision": "r1",
           "text": "La phrase numéro 17",
-          "homonyms": [],
-          "audio": {
-            "sha256": "17ac016fda2ac4d7fd215ab2148e12a6b7cd3466fdc69234068416370b6395b6",
-            "byteLength": 48017,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-018",
           "itemRevision": "r1",
           "text": "La phrase numéro 18",
-          "homonyms": [],
-          "audio": {
-            "sha256": "1d68fff5ce69d2f52fed425049c8478aef2f7998ba0bfd0ae6b130b9ecfd5a3b",
-            "byteLength": 48018,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-019",
           "itemRevision": "r1",
           "text": "La phrase numéro 19",
-          "homonyms": [],
-          "audio": {
-            "sha256": "c79b69c475e945410eef594477e65eb8afbc60d469fdb9f6d294a23357c1ede0",
-            "byteLength": 48019,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         },
         {
           "itemId": "item-020",
           "itemRevision": "r1",
           "text": "La phrase numéro 20",
-          "homonyms": [],
-          "audio": {
-            "sha256": "bd5b0a61e8f655f847c333cf0f0fabdb7c5037727b1da1972fa78bc7aa2be702",
-            "byteLength": 48020,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         }
       ],
-      "masker": {
-        "maskerId": "ltass-fr",
-        "revision": "1",
-        "sha256": "f8877bdc9621d64fece5c4d3cdd667587e5825828cc2d743d6b0cfa0c4497b93",
-        "rmsDbfs": -26.0,
-        "ltasSource": "genlexis-fr@pool-2026-07-30",
-        "measurementChainId": "genlexis-metrics",
-        "measurementChainVersion": "1.0.0",
-        "recipe": null
-      },
-      "gainRule": {
-        "kind": "fixed_speech_variable_masker",
-        "speechLevelMetric": "active_speech_rms_dbfs",
-        "maskerLevelMetric": "rms_dbfs",
-        "referenceDbfs": -23.0
-      },
       "issuedAt": 1756300000000
     }
   }

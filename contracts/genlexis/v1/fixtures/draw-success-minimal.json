@@ -43,43 +43,9 @@
           "itemId": "item-001",
           "itemRevision": "r1",
           "text": "La phrase numéro 1",
-          "homonyms": [],
-          "audio": {
-            "sha256": "30bd1afe98911f02cd1a3b9d16f6556d1521173366e3cdf5281c03bbd9e40eee",
-            "byteLength": 48001,
-            "activeSpeechRmsDbfs": -23.0,
-            "synthesis": {
-              "voice": "kokoro-fr-1",
-              "model": "Kokoro-82M",
-              "modelVersion": "v1.0",
-              "parameters": {
-                "speed": 1.0,
-                "pitch": 0.0
-              },
-              "format": "audio/wav",
-              "sampleRate": 24000,
-              "chainId": "genlexis-synthesis",
-              "chainVersion": "1.0.0"
-            }
-          }
+          "homonyms": []
         }
       ],
-      "masker": {
-        "maskerId": "ltass-fr",
-        "revision": "1",
-        "sha256": "f8877bdc9621d64fece5c4d3cdd667587e5825828cc2d743d6b0cfa0c4497b93",
-        "rmsDbfs": -26.0,
-        "ltasSource": "genlexis-fr@pool-2026-07-30",
-        "measurementChainId": "genlexis-metrics",
-        "measurementChainVersion": "1.0.0",
-        "recipe": null
-      },
-      "gainRule": {
-        "kind": "fixed_speech_variable_masker",
-        "speechLevelMetric": "active_speech_rms_dbfs",
-        "maskerLevelMetric": "rms_dbfs",
-        "referenceDbfs": -23.0
-      },
       "issuedAt": 1756300000000
     }
   }

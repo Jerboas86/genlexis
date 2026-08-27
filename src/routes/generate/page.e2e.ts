@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
 	cleanupE2eFixtures,
 	FIXTURE_PHONEME_COUNT,
+	FIXTURE_SUFFIX,
 	FIXTURE_SYLLABLE_COUNT_SHARED,
 	NOUN_FS,
 	NOUN_FP,
@@ -42,8 +43,19 @@ const tokensOf = (sentence: string) =>
 
 const listsCount = (page: Page) => page.getByTestId('list').count();
 
+/**
+ * The results, scoped to this worker's own fixtures.
+ *
+ * Workers run in parallel against one database, so a query that matches "nouns
+ * of two syllables" matches every worker's nouns, not just this one's. Without
+ * the scope these assertions pass or fail depending on how the suite happened to
+ * be sharded, which is the worst kind of test.
+ */
 const normalizedResults = async (page: Page) =>
-	(await sentencesIn(page)).map((sentence) => tokensOf(sentence).join(' ')).sort();
+	(await sentencesIn(page))
+		.map((sentence) => tokensOf(sentence).join(' '))
+		.filter((sentence) => sentence.includes(FIXTURE_SUFFIX))
+		.sort();
 
 test.describe('/generate', () => {
 	test.beforeAll(async () => {
@@ -308,5 +320,114 @@ test.describe('/generate', () => {
 		await page.goto(`/generate#${params.toString()}`);
 		await expect(page.locator('#pattern')).toBeVisible();
 		await expect(page.getByTestId('lists')).toHaveCount(0);
+	});
+
+	// The balanced path runs a different engine entry point with a phonemic
+	// target, and until now nothing exercised it end to end.
+	test.describe('balanced generation', () => {
+		test('reports a phonemic score per list when balancing is on', async ({ page }) => {
+			await goToGenerate(page);
+			await page.getByTestId('balance-toggle').check();
+			await submitForm(page);
+
+			const scores = page.getByTestId('list-score');
+			expect(await scores.count()).toBeGreaterThan(0);
+			// A score is a distance, so it is a non-negative number rather than a label.
+			for (const text of await scores.allTextContents()) {
+				expect(Number(text.replace(/[^0-9.]/g, ''))).not.toBeNaN();
+			}
+		});
+
+		test('reports no score when balancing is off', async ({ page }) => {
+			await goToGenerate(page);
+			await submitForm(page);
+			await expect(page.getByTestId('list-score')).toHaveCount(0);
+		});
+
+		test('keeps the balance choice across a reload from the URL hash', async ({ page }) => {
+			await goToGenerate(page);
+			await page.getByTestId('balance-toggle').check();
+			await submitForm(page);
+			expect(page.url()).toContain('balanced=1');
+
+			await page.reload();
+			await expect(page.getByTestId('balance-toggle')).toBeChecked();
+		});
+	});
+
+	test.describe('the richer patterns', () => {
+		// Only det_noun and noun were covered; these two carry an adjective and a
+		// verb slot that the repository joins differently.
+		for (const pattern of ['det_noun_adj', 'np_verb'] as const) {
+			test(`${pattern} produces three-token sentences`, async ({ page }) => {
+				await goToGenerate(page);
+				await setSelect(page, '#pattern', pattern);
+				await submitForm(page);
+
+				const sentences = await sentencesIn(page);
+				expect(sentences.length).toBeGreaterThan(0);
+				for (const sentence of sentences) {
+					expect(tokensOf(sentence).length).toBeGreaterThanOrEqual(3);
+				}
+			});
+		}
+	});
+
+	test.describe('the count fields', () => {
+		test('stops the browser from asking for more lists than the form allows', async ({ page }) => {
+			// The clamp itself is server-side and covered by `params.spec.ts`; what
+			// the screen owes is a field that cannot ask for the impossible in the
+			// first place.
+			await goToGenerate(page);
+			await expect(page.locator('#listCount')).toHaveAttribute('max', '5');
+			await expect(page.locator('#itemsPerList')).toHaveAttribute('max', '50');
+		});
+
+		test('honours a single list', async ({ page }) => {
+			await goToGenerate(page);
+			await setNumber(page, '#listCount', '1');
+			await submitForm(page);
+			expect(await listsCount(page)).toBe(1);
+		});
+
+		test('never returns more items than were asked for', async ({ page }) => {
+			await goToGenerate(page);
+			await setNumber(page, '#listCount', '1');
+			await setNumber(page, '#itemsPerList', '3');
+			await submitForm(page);
+			expect((await sentencesIn(page)).length).toBeLessThanOrEqual(3);
+		});
+
+		test('falls back to the default when the count is left blank', async ({ page }) => {
+			// An untouched field used to coerce to zero and clamp to one item, which
+			// silently produced a list of a single sentence.
+			await goToGenerate(page);
+			await setNumber(page, '#itemsPerList', '');
+			await setNumber(page, '#listCount', '1');
+			await submitForm(page);
+			expect((await sentencesIn(page)).length).toBeGreaterThan(1);
+		});
+	});
+
+	test.describe('the wire contract', () => {
+		// The parsers are covered exhaustively by `params.spec.ts`; these prove the
+		// refusals actually reach the wire rather than being swallowed.
+		test('refuses a generation with no recognisable pattern', async ({ request }) => {
+			const response = await request.post('/generate', {
+				form: { pattern: 'nonsense' },
+				headers: { 'x-sveltekit-action': 'true' },
+				failOnStatusCode: false
+			});
+			expect(response.status()).toBeGreaterThanOrEqual(400);
+		});
+
+		test('refuses a balanced generation with a malformed language', async ({ request }) => {
+			const response = await request.post('/generate', {
+				form: { language: 'fr', pattern: 'det_noun' },
+				headers: { 'x-sveltekit-action': 'true' },
+				failOnStatusCode: false
+			});
+			expect(response.status()).toBeGreaterThanOrEqual(400);
+		});
 	});
 });

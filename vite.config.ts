@@ -10,6 +10,20 @@ export default defineConfig({
 	],
 	test: {
 		expect: { requireAssertions: true },
+		coverage: {
+			provider: 'v8',
+			reporter: ['text-summary', 'json-summary', 'html'],
+			// The application and the engine. Everything else is generated,
+			// configuration, or the test scaffolding itself, and counting those
+			// inflates the figure without protecting anything.
+			include: ['src/**/*.{ts,svelte}', 'libs/*/src/**/*.ts'],
+			exclude: [
+				'src/lib/paraglide/**',
+				'src/**/*.d.ts',
+				'**/*.{test,spec,e2e}.{ts,js}',
+				'src/routes/**/+layout.svelte'
+			]
+		},
 		projects: [
 			{
 				extends: './vite.config.ts',

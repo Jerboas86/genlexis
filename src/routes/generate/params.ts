@@ -46,6 +46,22 @@ export const patternHasDet = (pattern: SupportedPattern): boolean =>
 	pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
 
 /**
+ * A number, but only from the two things a request can honestly carry one in.
+ *
+ * `Number()` alone is not safe here: it turns `""`, `null`, `[]` and `true` into
+ * integers. The empty string is the one that bit — an untouched count field
+ * arrived as `0` and was clamped to the minimum, so a blank "items per list"
+ * silently produced one item instead of the documented default of ten.
+ */
+const toNumber = (value: unknown): number | null => {
+	if (typeof value === 'number') return value;
+	if (typeof value !== 'string') return null;
+	const trimmed = value.trim();
+	if (trimmed === '') return null;
+	return Number(trimmed);
+};
+
+/**
  * An integer clamped into range, falling back when it is not an integer.
  *
  * Clamping rather than refusing is deliberate for the two count fields: a
@@ -59,8 +75,8 @@ export const parseInteger = (
 	max: number,
 	fallback: number
 ): number => {
-	const raw = Number(value);
-	if (!Number.isInteger(raw)) return fallback;
+	const raw = toNumber(value);
+	if (raw === null || !Number.isInteger(raw)) return fallback;
 	return Math.max(min, Math.min(max, raw));
 };
 
@@ -78,8 +94,8 @@ export const parseOptionalInteger = (
 	max: number
 ): number | undefined => {
 	if (value === undefined || value === null || value === '') return undefined;
-	const raw = Number(value);
-	if (!Number.isInteger(raw)) return undefined;
+	const raw = toNumber(value);
+	if (raw === null || !Number.isInteger(raw)) return undefined;
 	if (raw < min || raw > max) return undefined;
 	return raw;
 };

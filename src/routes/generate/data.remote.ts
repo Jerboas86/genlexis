@@ -5,29 +5,16 @@ import {
 	generateBalancedAcceptedSentences,
 	getAcceptedSentenceCount,
 	type BalancedGenerateResult,
-	type DetType,
-	type GenerateResult,
-	type Gender,
-	type GrammNumber,
-	type LengthUnit,
-	type LexicalDensity,
-	type SupportedPattern
+	type GenerateResult
 } from '$lib/server/genlexis';
-
-const REQUIRED_SENTENCE_COUNT = 10;
-const MAX_LISTS = 5;
-const MAX_ITEMS_PER_LIST = 50;
-const MAX_NOUN_LENGTH = 20;
-
-const SUPPORTED_PATTERNS: SupportedPattern[] = ['det_noun', 'noun', 'det_noun_adj', 'np_verb'];
-
-const patternHasDet = (pattern: SupportedPattern) =>
-	pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb';
-const DET_TYPES: DetType[] = ['definite', 'indefinite'];
-const GENDERS: Gender[] = ['m', 'f'];
-const GRAMM_NUMBERS: GrammNumber[] = ['s', 'p'];
-const LENGTH_UNITS: LengthUnit[] = ['syllables', 'phonemes'];
-const LEXICAL_DENSITIES: LexicalDensity[] = ['high', 'medium', 'low'];
+import {
+	MAX_ITEMS_PER_LIST,
+	MAX_LISTS,
+	REQUIRED_SENTENCE_COUNT,
+	parseBalancedParams,
+	parseGenerationParams,
+	type ParamsRefusal
+} from './params';
 
 export const acceptedSummary = query(async () => {
 	const acceptedCount = await getAcceptedSentenceCount();
@@ -41,111 +28,33 @@ export const acceptedSummary = query(async () => {
 	};
 });
 
-const parseInteger = (value: unknown, min: number, max: number, fallback: number) => {
-	const raw = typeof value === 'string' ? Number(value) : Number(value);
-	if (!Number.isInteger(raw)) return fallback;
-	return Math.max(min, Math.min(max, raw));
-};
-
-const parseOptionalInteger = (value: unknown, min: number, max: number): number | undefined => {
-	if (value === undefined || value === null || value === '') return undefined;
-	const raw = Number(value);
-	if (!Number.isInteger(raw)) return undefined;
-	if (raw < min || raw > max) return undefined;
-	return raw;
-};
-
-const parseEnum = <T extends string>(value: unknown, allowed: T[]): T | undefined => {
-	if (typeof value !== 'string' || value === '') return undefined;
-	return (allowed as string[]).includes(value) ? (value as T) : undefined;
-};
-
-const LANGUAGE_RE = /^[a-z]{2}-[A-Z]{2}$/;
-
-const parseLanguage = (value: unknown): string | undefined => {
-	if (typeof value !== 'string' || !LANGUAGE_RE.test(value)) return undefined;
-	return value;
-};
-
-const MAX_SEED_LENGTH = 128;
-
-const parseSeed = (value: unknown): string | undefined => {
-	if (typeof value !== 'string') return undefined;
-	const trimmed = value.trim();
-	if (trimmed === '') return undefined;
-	if (trimmed.length > MAX_SEED_LENGTH) return undefined;
-	return trimmed;
+/** The named refusals of `params.ts`, on the wire. */
+const REFUSAL_MESSAGES: Record<ParamsRefusal, string> = {
+	invalid_pattern: 'Invalid pattern',
+	invalid_language: 'Invalid language'
 };
 
 export const generate = form(
 	'unchecked',
 	async (data: Record<string, unknown>): Promise<GenerateResult> => {
-		const pattern = parseEnum<SupportedPattern>(data.pattern, SUPPORTED_PATTERNS);
-		if (!pattern) error(400, 'Invalid pattern');
+		const params = parseGenerationParams(data);
+		if (!params.ok) error(400, REFUSAL_MESSAGES[params.reason]);
 
-		const detType = patternHasDet(pattern)
-			? parseEnum<DetType>(data.detType, DET_TYPES)
-			: undefined;
-		const gender = parseEnum<Gender>(data.gender, GENDERS);
-		const grammNumber = parseEnum<GrammNumber>(data.grammNumber, GRAMM_NUMBERS);
-		const lengthUnit = parseEnum<LengthUnit>(data.lengthUnit, LENGTH_UNITS) ?? 'syllables';
-		const length = parseOptionalInteger(data.length, 1, MAX_NOUN_LENGTH);
-		const lexicalDensity = parseEnum<LexicalDensity>(data.lexicalDensity, LEXICAL_DENSITIES);
-		const listCount = parseInteger(data.listCount, 1, MAX_LISTS, 1);
-		const itemsPerList = parseInteger(data.itemsPerList, 1, MAX_ITEMS_PER_LIST, 10);
-		const seed = parseSeed(data.seed);
-
-		return generateAcceptedSentences({
-			pattern,
-			detType,
-			gender,
-			grammNumber,
-			lengthUnit: length !== undefined ? lengthUnit : undefined,
-			length,
-			lexicalDensity,
-			listCount,
-			itemsPerList,
-			seed
-		});
+		return generateAcceptedSentences(params.value);
 	}
 );
 
 export const generateBalanced = form(
 	'unchecked',
 	async (data: Record<string, unknown>): Promise<BalancedGenerateResult> => {
-		const language = parseLanguage(data.language);
-		if (!language) error(400, 'Invalid language');
-
-		const pattern = parseEnum<SupportedPattern>(data.pattern, SUPPORTED_PATTERNS);
-		if (!pattern) error(400, 'Invalid pattern');
-
-		const detType = patternHasDet(pattern)
-			? parseEnum<DetType>(data.detType, DET_TYPES)
-			: undefined;
-		const gender = parseEnum<Gender>(data.gender, GENDERS);
-		const grammNumber = parseEnum<GrammNumber>(data.grammNumber, GRAMM_NUMBERS);
-		const lengthUnit = parseEnum<LengthUnit>(data.lengthUnit, LENGTH_UNITS) ?? 'syllables';
-		const length = parseOptionalInteger(data.length, 1, MAX_NOUN_LENGTH);
-		const lexicalDensity = parseEnum<LexicalDensity>(data.lexicalDensity, LEXICAL_DENSITIES);
-		const listCount = parseInteger(data.listCount, 1, MAX_LISTS, 1);
-		const itemsPerList = parseInteger(data.itemsPerList, 1, MAX_ITEMS_PER_LIST, 10);
-		const seed = parseSeed(data.seed);
+		const params = parseBalancedParams(data);
+		if (!params.ok) error(400, REFUSAL_MESSAGES[params.reason]);
 
 		try {
-			return await generateBalancedAcceptedSentences({
-				language,
-				pattern,
-				detType,
-				gender,
-				grammNumber,
-				lengthUnit: length !== undefined ? lengthUnit : undefined,
-				length,
-				lexicalDensity,
-				listCount,
-				itemsPerList,
-				seed
-			});
+			return await generateBalancedAcceptedSentences(params.value);
 		} catch (err) {
+			// A language with no published phoneme distribution is a request this
+			// service cannot satisfy, not a fault in it — 422 rather than 500.
 			if (err instanceof Error && err.message.startsWith('No phoneme distribution')) {
 				error(422, err.message);
 			}

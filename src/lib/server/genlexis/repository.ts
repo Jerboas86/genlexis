@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
+import { createDrizzleGenerationRepository } from '@genlexis/core/adapters/drizzle';
 import {
-	createDrizzleGenerationRepository,
 	DEFAULT_PATTERNS,
 	frenchLanguagePreset,
 	type GenlexisRepository,

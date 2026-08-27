@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { l1Distance } from './distance';
+import { l1Distance } from './distance.js';
 
 describe('l1Distance', () => {
 	it('is zero for identical distributions', () => {

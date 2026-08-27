@@ -1,7 +1,7 @@
-import { selectBalancedLists } from './phonemes/balancer';
-import { addCounts, tokensToCounts } from './phonemes/distribution';
-import { createIpaTokenizer } from './phonemes/tokenizer';
-import type { PhonemeCounts, PhonemeDistribution, PooledWord } from './phonemes/types';
+import { selectBalancedLists } from './phonemes/balancer.js';
+import { addCounts, tokensToCounts } from './phonemes/distribution.js';
+import { createIpaTokenizer } from './phonemes/tokenizer.js';
+import type { PhonemeCounts, PhonemeDistribution, PooledWord } from './phonemes/types.js';
 import type {
 	AcceptedItem,
 	AcceptedItemWithIpa,
@@ -17,7 +17,7 @@ import type {
 	SentenceSummary,
 	SupportedPattern,
 	ValidationRepository
-} from './types';
+} from './types.js';
 
 const stripDedupeKey = ({ sentenceId, sentence, pattern }: AcceptedItem): AcceptedSentence => ({
 	sentenceId,
@@ -184,4 +184,4 @@ export type {
 	GenerationRepository,
 	GenlexisRepository,
 	ValidationRepository
-} from './types';
+} from './types.js';

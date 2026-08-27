@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { selectBalancedList, selectBalancedLists } from './balancer';
-import { l1Distance } from './distance';
-import { countsToProbabilities } from './distribution';
-import type { PooledWord } from './types';
+import { selectBalancedList, selectBalancedLists } from './balancer.js';
+import { l1Distance } from './distance.js';
+import { countsToProbabilities } from './distribution.js';
+import type { PooledWord } from './types.js';
 
 const pool: PooledWord[] = [
 	{ id: 'aaa', counts: { a: 3 } },

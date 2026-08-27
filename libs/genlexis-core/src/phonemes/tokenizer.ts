@@ -1,4 +1,4 @@
-import type { IpaTokenizer, TokenizationResult, TokenizerOptions } from './types';
+import type { IpaTokenizer, TokenizationResult, TokenizerOptions } from './types.js';
 
 const STRESS_MARKS = /[ˈˌ]/g;
 const LENGTH_MARK = /ː/g;

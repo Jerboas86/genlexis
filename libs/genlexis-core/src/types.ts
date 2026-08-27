@@ -1,5 +1,5 @@
-import type { TokenizerOptions } from './phonemes/types';
-import type { PhonemeDistribution } from './phonemes/types';
+import type { TokenizerOptions } from './phonemes/types.js';
+import type { PhonemeDistribution } from './phonemes/types.js';
 
 export type SemanticsLabel = 'natural' | 'plausible' | 'strained' | 'nonsensical';
 

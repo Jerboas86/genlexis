@@ -1,0 +1,107 @@
+# Publishes `@genlexis/core` to the public npm registry.
+#
+# The only manual steps are the approval and the tag. Everything a release
+# depends on — the lockfile, the checks, the built artifact, the tarball test —
+# runs here, so the same version can never name two different contents.
+name: Publish @genlexis/core
+
+on:
+  push:
+    tags:
+      - "core-v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm-publish
+    permissions:
+      contents: read
+      # Required for npm provenance: the registry verifies this workflow ran.
+      id-token: write
+    defaults:
+      run:
+        working-directory: libs/genlexis-core
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install (locked)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: .
+
+      # A dirty tree means the tarball would not match the tag, which is the one
+      # thing a version number is supposed to guarantee.
+      - name: Refuse a dirty tree
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::working tree is dirty after a locked install"
+            git status --porcelain
+            exit 1
+          fi
+
+      - name: Refuse a tag that disagrees with the version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="${GITHUB_REF_NAME#core-v}"
+          if [ "$version" != "$tag" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not name version $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_ENV"
+
+      - name: Refuse a version that already exists
+        run: |
+          if npm view "@genlexis/core@${version}" version >/dev/null 2>&1; then
+            echo "::error::@genlexis/core@${version} is already published"
+            exit 1
+          fi
+
+      - name: Lint
+        run: pnpm lint
+        working-directory: .
+
+      - name: Type-check the package
+        run: pnpm exec tsc -p tsconfig.json
+
+      - name: Unit tests (no database)
+        run: pnpm exec vitest --run libs/genlexis-core
+        working-directory: .
+
+      - name: Build
+        run: pnpm build
+
+      - name: Tarball test in a clean project
+        run: pnpm test:pack
+
+      - name: Publish with provenance
+        run: pnpm publish --no-git-checks --access public --provenance
+        env:
+          # A publish-scoped automation token. It is never read by Helixum:
+          # installing the package needs no authentication at all.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_GENLEXIS_CORE }}
+
+      - name: Release notes
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "@genlexis/core v${{ env.version }}"
+          generate_release_notes: true
+          body: |
+            `@genlexis/core@${{ env.version }}` is on npm with provenance.
+
+            Public API changes are listed below. Entry points:
+            `@genlexis/core` (engine, no database) and
+            `@genlexis/core/adapters/drizzle` (optional `drizzle-orm` peer).

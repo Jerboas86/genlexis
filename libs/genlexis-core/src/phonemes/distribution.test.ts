@@ -6,7 +6,7 @@ import {
 	subtractCounts,
 	sumCounts,
 	tokensToCounts
-} from './distribution';
+} from './distribution.js';
 
 describe('distribution helpers', () => {
 	it('tallies token occurrences', () => {

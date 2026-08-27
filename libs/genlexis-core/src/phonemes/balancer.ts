@@ -1,12 +1,12 @@
-import { l1Distance } from './distance';
-import { addCounts, countsToProbabilities, subtractCounts, sumCounts } from './distribution';
+import { l1Distance } from './distance.js';
+import { addCounts, countsToProbabilities, subtractCounts, sumCounts } from './distribution.js';
 import type {
 	BalancerOptions,
 	ListResult,
 	PhonemeCounts,
 	PhonemeDistribution,
 	PooledWord
-} from './types';
+} from './types.js';
 
 const scoreAfterAdd = (
 	current: PhonemeCounts,
@@ -41,6 +41,122 @@ const scoreAfterAdd = (
 const score = (counts: PhonemeCounts, target: PhonemeDistribution): number =>
 	l1Distance(target, countsToProbabilities(counts));
 
+type ScoredWord = { word: PooledWord; score: number };
+
+type SelectionState = {
+	items: PooledWord[];
+	used: Set<PooledWord>;
+	counts: PhonemeCounts;
+	total: number;
+	score: number;
+};
+
+const findBestAvailableWord = (
+	pool: PooledWord[],
+	used: Set<PooledWord>,
+	counts: PhonemeCounts,
+	total: number,
+	wordSums: Map<PooledWord, number>,
+	target: PhonemeDistribution,
+	maximumScore = Number.POSITIVE_INFINITY
+): ScoredWord | null => {
+	let best: ScoredWord | null = null;
+	let bestScore = maximumScore;
+
+	for (const word of pool) {
+		if (used.has(word)) continue;
+		const candidateScore = scoreAfterAdd(counts, total, word, wordSums.get(word) ?? 0, target);
+		if (candidateScore < bestScore) {
+			best = { word, score: candidateScore };
+			bestScore = candidateScore;
+		}
+	}
+
+	return best;
+};
+
+const selectGreedy = (
+	pool: PooledWord[],
+	target: PhonemeDistribution,
+	size: number,
+	wordSums: Map<PooledWord, number>
+): SelectionState => {
+	const state: SelectionState = {
+		items: [],
+		used: new Set(),
+		counts: {},
+		total: 0,
+		score: l1Distance(target, {})
+	};
+
+	for (let step = 0; step < size; step++) {
+		const best = findBestAvailableWord(
+			pool,
+			state.used,
+			state.counts,
+			state.total,
+			wordSums,
+			target
+		);
+		if (!best) break;
+
+		state.items.push(best.word);
+		state.used.add(best.word);
+		state.counts = addCounts(state.counts, best.word.counts);
+		state.total += wordSums.get(best.word) ?? 0;
+	}
+
+	state.score = score(state.counts, target);
+	return state;
+};
+
+const refineSelectionOnce = (
+	state: SelectionState,
+	pool: PooledWord[],
+	target: PhonemeDistribution,
+	wordSums: Map<PooledWord, number>
+): boolean => {
+	let improved = false;
+
+	for (let index = 0; index < state.items.length; index++) {
+		const outgoing = state.items[index];
+		const withoutCounts = subtractCounts(state.counts, outgoing.counts);
+		const withoutTotal = state.total - (wordSums.get(outgoing) ?? 0);
+		const bestSwap = findBestAvailableWord(
+			pool,
+			state.used,
+			withoutCounts,
+			withoutTotal,
+			wordSums,
+			target,
+			state.score
+		);
+		if (!bestSwap) continue;
+
+		state.used.delete(outgoing);
+		state.used.add(bestSwap.word);
+		state.items[index] = bestSwap.word;
+		state.counts = addCounts(withoutCounts, bestSwap.word.counts);
+		state.total = withoutTotal + (wordSums.get(bestSwap.word) ?? 0);
+		state.score = bestSwap.score;
+		improved = true;
+	}
+
+	return improved;
+};
+
+const refineSelection = (
+	state: SelectionState,
+	pool: PooledWord[],
+	target: PhonemeDistribution,
+	wordSums: Map<PooledWord, number>,
+	passes: number
+): void => {
+	for (let pass = 0; pass < passes; pass++) {
+		if (!refineSelectionOnce(state, pool, target, wordSums)) break;
+	}
+};
+
 export const selectBalancedList = (
 	pool: PooledWord[],
 	target: PhonemeDistribution,
@@ -56,76 +172,10 @@ export const selectBalancedList = (
 	const wordSums = new Map<PooledWord, number>();
 	for (const word of usable) wordSums.set(word, sumCounts(word.counts));
 
-	const selected: PooledWord[] = [];
-	const used = new Set<PooledWord>();
-	let currentCounts: PhonemeCounts = {};
-	let currentTotal = 0;
+	const state = selectGreedy(usable, target, actualSize, wordSums);
+	refineSelection(state, usable, target, wordSums, refinementPasses);
 
-	for (let step = 0; step < actualSize; step++) {
-		let bestWord: PooledWord | null = null;
-		let bestScore = Number.POSITIVE_INFINITY;
-		for (const word of usable) {
-			if (used.has(word)) continue;
-			const candidateScore = scoreAfterAdd(
-				currentCounts,
-				currentTotal,
-				word,
-				wordSums.get(word) ?? 0,
-				target
-			);
-			if (candidateScore < bestScore) {
-				bestScore = candidateScore;
-				bestWord = word;
-			}
-		}
-		if (!bestWord) break;
-		selected.push(bestWord);
-		used.add(bestWord);
-		currentCounts = addCounts(currentCounts, bestWord.counts);
-		currentTotal += wordSums.get(bestWord) ?? 0;
-	}
-
-	let currentScore = score(currentCounts, target);
-
-	for (let pass = 0; pass < refinementPasses; pass++) {
-		let improved = false;
-		for (let index = 0; index < selected.length; index++) {
-			const outgoing = selected[index];
-			const outgoingSum = wordSums.get(outgoing) ?? 0;
-			const withoutCounts = subtractCounts(currentCounts, outgoing.counts);
-			const withoutTotal = currentTotal - outgoingSum;
-
-			let bestSwap: PooledWord | null = null;
-			let bestSwapScore = currentScore;
-			for (const candidate of usable) {
-				if (used.has(candidate)) continue;
-				const candidateScore = scoreAfterAdd(
-					withoutCounts,
-					withoutTotal,
-					candidate,
-					wordSums.get(candidate) ?? 0,
-					target
-				);
-				if (candidateScore < bestSwapScore) {
-					bestSwapScore = candidateScore;
-					bestSwap = candidate;
-				}
-			}
-
-			if (bestSwap) {
-				used.delete(outgoing);
-				used.add(bestSwap);
-				selected[index] = bestSwap;
-				currentCounts = addCounts(withoutCounts, bestSwap.counts);
-				currentTotal = withoutTotal + (wordSums.get(bestSwap) ?? 0);
-				currentScore = bestSwapScore;
-				improved = true;
-			}
-		}
-		if (!improved) break;
-	}
-
-	return { items: selected, score: currentScore };
+	return { items: state.items, score: state.score };
 };
 
 export const selectBalancedLists = (

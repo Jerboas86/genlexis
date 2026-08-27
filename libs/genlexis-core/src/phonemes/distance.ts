@@ -1,4 +1,4 @@
-import type { PhonemeDistribution } from './types';
+import type { PhonemeDistribution } from './types.js';
 
 export const l1Distance = (target: PhonemeDistribution, candidate: PhonemeDistribution): number => {
 	const seen = new Set<string>();

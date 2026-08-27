@@ -1,4 +1,4 @@
-import type { PhonemeCounts, PhonemeDistribution } from './types';
+import type { PhonemeCounts, PhonemeDistribution } from './types.js';
 
 export const tokensToCounts = (tokens: string[]): PhonemeCounts => {
 	const counts: PhonemeCounts = {};

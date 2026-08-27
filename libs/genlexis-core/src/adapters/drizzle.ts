@@ -1,5 +1,5 @@
 import { sql, type SQL } from 'drizzle-orm';
-import type { PhonemeDistribution } from '../phonemes/types';
+import type { PhonemeDistribution } from '../phonemes/types.js';
 import type {
 	AcceptedItem,
 	AcceptedItemWithIpa,
@@ -10,7 +10,7 @@ import type {
 	GenerationRepository,
 	LexicalDensity,
 	PatternSpec
-} from '../types';
+} from '../types.js';
 
 type DrizzleDb = {
 	// drizzle's execute signature uses its own SQL type; using `any` here keeps the
@@ -123,7 +123,9 @@ export const createDrizzleGenerationRepository = (
 				? sql`LOWER(noun_token.surface || ' ' || adj_token.surface)`
 				: sql`LOWER(noun_token.surface)`;
 
-			const genderFilter: SQL = options.gender ? sql`AND noun_le.gender = ${options.gender}` : sql``;
+			const genderFilter: SQL = options.gender
+				? sql`AND noun_le.gender = ${options.gender}`
+				: sql``;
 			const numberFilter: SQL = options.grammNumber
 				? sql`AND noun_le.number = ${options.grammNumber}`
 				: sql``;
@@ -218,7 +220,9 @@ export const createDrizzleGenerationRepository = (
 			const adjIpaPick: SQL = spec.hasAdj ? sql`, "adjPhonoIpa"` : sql``;
 			const verbIpaPick: SQL = spec.hasVerb ? sql`, "verbPhonoIpa"` : sql``;
 
-			const genderFilter: SQL = options.gender ? sql`AND noun_le.gender = ${options.gender}` : sql``;
+			const genderFilter: SQL = options.gender
+				? sql`AND noun_le.gender = ${options.gender}`
+				: sql``;
 			const numberFilter: SQL = options.grammNumber
 				? sql`AND noun_le.number = ${options.grammNumber}`
 				: sql``;

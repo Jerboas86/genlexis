@@ -4,7 +4,7 @@ import {
 	type AcceptedItemWithIpa,
 	type FindAcceptedItemsWithIpaOptions,
 	type GenlexisRepository
-} from './generate';
+} from './generate.js';
 
 const FRENCH_DISTRIBUTION = {
 	ʁ: 0.0773809523809523,

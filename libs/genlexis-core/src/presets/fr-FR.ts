@@ -1,4 +1,4 @@
-import type { LanguagePreset } from '../types';
+import type { LanguagePreset } from '../types.js';
 
 export const frenchLanguagePreset: LanguagePreset = {
 	determiners: {

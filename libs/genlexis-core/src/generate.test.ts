@@ -6,7 +6,7 @@ import {
 	type AcceptedItem,
 	type FindAcceptedItemsOptions,
 	type GenlexisRepository
-} from './generate';
+} from './generate.js';
 
 const makeRepository = (overrides: Partial<GenlexisRepository>): GenlexisRepository => ({
 	findLeastVotedValidationCandidate: vi.fn(async () => null),

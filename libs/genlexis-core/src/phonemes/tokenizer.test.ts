@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createIpaTokenizer } from './tokenizer';
+import { createIpaTokenizer } from './tokenizer.js';
 
 const FRENCH_SAMPLE = [
 	'ʁ',

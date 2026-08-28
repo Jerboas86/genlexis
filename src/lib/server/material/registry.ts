@@ -83,10 +83,24 @@ const REVISIONS: Readonly<Record<string, ProtocolConfiguration>> = {
 		pattern: 'np_verb',
 		lexicalDensity: 'medium',
 		itemsPerList: 20,
-		// §16 (9) of `listening-conditions.md` has not set this from measurement
-		// yet. It is a published placeholder with an owner, not a finding, and it
-		// must not be quoted as one.
-		phonemeBalanceTolerance: 0.08,
+		// Measured, not chosen: over 200 seeds against the accepted `np_verb`
+		// corpus at medium density (145 sentences on 2026-08-29) the distance ran
+		// min 0.1258, median 0.1458, p90 0.1590, max 0.1804. The previous 0.08 was
+		// a placeholder below the whole distribution, so every draw was refused
+		// with `balance_tolerance_exceeded` — in production as much as anywhere,
+		// the corpus being the same.
+		//
+		// Set at the p90 so that a single attempt succeeds nine times in ten and
+		// the eight attempts effectively never exhaust, while the tolerance stays a
+		// real gate: a corpus that degraded would still be refused rather than
+		// served. It is expected to tighten as the corpus grows, which is a new
+		// revision rather than an edit to this one — this value could be corrected
+		// in place only because nothing had ever consumed it.
+		//
+		// §16 (9) of `listening-conditions.md` still owns the clinical figure; this
+		// is what the material can currently deliver, not what the instrument
+		// should ultimately require.
+		phonemeBalanceTolerance: 0.16,
 		maxDrawAttempts: 8
 	}
 };

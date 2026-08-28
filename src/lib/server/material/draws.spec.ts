@@ -7,7 +7,7 @@ import {
 	type StoredDraw
 } from './draws';
 import { itemIdentityKey, itemRevisionOf } from './fingerprint';
-import { PUBLISHED_REVISIONS } from './registry';
+import { PUBLISHED_REVISIONS, resolveProtocolRevision } from './registry';
 
 const REVISION = PUBLISHED_REVISIONS[0]!;
 const KEY = 'a'.repeat(64);
@@ -269,7 +269,11 @@ describe('the phonemic tolerance', () => {
 	it('reports the distance and the tolerance it was judged against', async () => {
 		const draw = await createDraw(request(), dependencies({ generate: poolGenerator(500, 0.02) }));
 		expect(draw.generation.phonemeBalanceDistance).toBe(0.02);
-		expect(draw.generation.phonemeBalanceTolerance).toBe(0.08);
+		// Read from the registry rather than repeated here: what matters is that the
+		// draw carries the tolerance it was judged against, not what that number is.
+		expect(draw.generation.phonemeBalanceTolerance).toBe(
+			resolveProtocolRevision(PUBLISHED_REVISIONS[0]!)!.phonemeBalanceTolerance
+		);
 	});
 });
 

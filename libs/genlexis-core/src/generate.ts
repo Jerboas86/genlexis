@@ -97,9 +97,11 @@ export const generateBalancedAcceptedSentences = async (
 		seed: options.seed
 	});
 
+	const excluded = new Set(options.excludedSentenceIds ?? []);
 	const seen = new Set<string>();
 	const unique: AcceptedItemWithIpa[] = [];
 	for (const item of items) {
+		if (excluded.has(item.sentenceId)) continue;
 		if (seen.has(item.dedupeKey)) continue;
 		seen.add(item.dedupeKey);
 		unique.push(item);
@@ -122,7 +124,10 @@ export const generateBalancedAcceptedSentences = async (
 
 	const balanced = selectBalancedLists(pool, target, listCount, itemsPerList, {
 		allowReuse: options.allowReuseAcrossLists ?? false,
-		refinementPasses: options.refinementPasses
+		refinementPasses: options.refinementPasses,
+		// Ordering the pool is not enough: the greedy pass takes a global argmin
+		// and would ignore it. The seed has to reach the selection itself.
+		seed: options.seed
 	});
 
 	const lists: AcceptedSentence[][] = balanced.map((list) =>

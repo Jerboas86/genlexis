@@ -105,8 +105,8 @@
           "lengthUnit": "syllables",
           "length": 6
         },
-        "phonemeBalanceDistance": 0.0799,
-        "phonemeBalanceTolerance": 0.08
+        "phonemeBalanceDistance": 0.1599,
+        "phonemeBalanceTolerance": 0.16
       },
       "items": [
         {

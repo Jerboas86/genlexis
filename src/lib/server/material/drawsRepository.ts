@@ -107,8 +107,14 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 			// One transaction: a draw whose items were not written cannot be
 			// resolved, and a ledger entry pointing at a draw that does not exist
 			// would replay into nothing.
-			await database.transaction(async (tx) => {
-				await tx.insert(materialDraws).values({
+			//
+			// `batch` rather than `transaction`: the application runs on Neon's HTTP
+			// driver, which has no interactive transactions and throws on
+			// `.transaction()`. A batch is sent as a single request and committed as
+			// one unit server-side, which is the atomicity this needs — the three
+			// statements are known up front and none reads what the previous wrote.
+			await database.batch([
+				database.insert(materialDraws).values({
 					drawId: draw.drawId,
 					protocolRevision: draw.protocolRevision,
 					materialSourceId: draw.materialRelease.sourceId,
@@ -120,8 +126,8 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 					phonemeBalanceDistance: String(draw.generation.phonemeBalanceDistance),
 					phonemeBalanceTolerance: String(draw.generation.phonemeBalanceTolerance),
 					issuedAt: new Date(draw.issuedAt)
-				});
-				await tx.insert(materialDrawItems).values(
+				}),
+				database.insert(materialDrawItems).values(
 					draw.items.map((item, position) => ({
 						drawId: draw.drawId,
 						position,
@@ -130,11 +136,11 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 						text: item.text,
 						sentenceId: Number(item.itemId)
 					}))
-				);
-				await tx
+				),
+				database
 					.insert(materialIdempotency)
-					.values({ idempotencyKey, fingerprint, drawId: draw.drawId, expiresAt });
-			});
+					.values({ idempotencyKey, fingerprint, drawId: draw.drawId, expiresAt })
+			]);
 		}
 	};
 }

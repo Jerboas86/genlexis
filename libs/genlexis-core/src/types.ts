@@ -78,6 +78,15 @@ export type FindAcceptedItemsWithIpaOptions = Omit<FindAcceptedItemsOptions, 'li
 
 export type GenerateBalancedOptions = GenerateOptions & {
 	language: string;
+	/**
+	 * Sentences the balancer may not pick.
+	 *
+	 * Rotation needs this at the pool rather than after the fact: the balancer
+	 * converges on the same strong candidates, so generating a list and then
+	 * discarding it because one item is excluded fails over and over. Removing
+	 * them first lets a single attempt succeed.
+	 */
+	excludedSentenceIds?: readonly number[];
 	poolMultiplier?: number;
 	allowReuseAcrossLists?: boolean;
 	refinementPasses?: number;

@@ -75,11 +75,32 @@ const findBestAvailableWord = (
 	return best;
 };
 
+/**
+ * A deterministic generator, so a seed always yields the same list.
+ *
+ * `Math.random` would make a draw unreproducible, and the contract publishes the
+ * seed precisely so that a served draw can be explained later.
+ */
+const createRandom = (seed: string): (() => number) => {
+	let h = 2166136261;
+	for (let i = 0; i < seed.length; i++) {
+		h ^= seed.charCodeAt(i);
+		h = Math.imul(h, 16777619);
+	}
+	return () => {
+		h += 0x6d2b79f5;
+		let x = Math.imul(h ^ (h >>> 15), 1 | h);
+		x ^= x + Math.imul(x ^ (x >>> 7), 61 | x);
+		return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+	};
+};
+
 const selectGreedy = (
 	pool: PooledWord[],
 	target: PhonemeDistribution,
 	size: number,
-	wordSums: Map<PooledWord, number>
+	wordSums: Map<PooledWord, number>,
+	seed: string | undefined
 ): SelectionState => {
 	const state: SelectionState = {
 		items: [],
@@ -89,7 +110,21 @@ const selectGreedy = (
 		score: l1Distance(target, {})
 	};
 
-	for (let step = 0; step < size; step++) {
+	// The seeded start is what makes two draws differ. From an empty state the
+	// greedy pass has one global argmin and would return it whatever the pool's
+	// order; committing to a random first item sends each seed towards a
+	// different local optimum, which the refinement then improves.
+	if (seed !== undefined && size > 0) {
+		const first = pool[Math.floor(createRandom(seed)() * pool.length)];
+		if (first !== undefined) {
+			state.items.push(first);
+			state.used.add(first);
+			state.counts = addCounts(state.counts, first.counts);
+			state.total += wordSums.get(first) ?? 0;
+		}
+	}
+
+	for (let step = state.items.length; step < size; step++) {
 		const best = findBestAvailableWord(
 			pool,
 			state.used,
@@ -161,7 +196,8 @@ export const selectBalancedList = (
 	pool: PooledWord[],
 	target: PhonemeDistribution,
 	size: number,
-	refinementPasses = 3
+	refinementPasses = 3,
+	seed?: string
 ): ListResult => {
 	const usable = pool.filter((word) => sumCounts(word.counts) > 0);
 	if (size <= 0 || usable.length === 0) {
@@ -172,7 +208,7 @@ export const selectBalancedList = (
 	const wordSums = new Map<PooledWord, number>();
 	for (const word of usable) wordSums.set(word, sumCounts(word.counts));
 
-	const state = selectGreedy(usable, target, actualSize, wordSums);
+	const state = selectGreedy(usable, target, actualSize, wordSums, seed);
 	refineSelection(state, usable, target, wordSums, refinementPasses);
 
 	return { items: state.items, score: state.score };
@@ -185,19 +221,33 @@ export const selectBalancedLists = (
 	size: number,
 	options: BalancerOptions = {}
 ): ListResult[] => {
-	const { allowReuse = false, refinementPasses = 3 } = options;
+	const { allowReuse = false, refinementPasses = 3, seed } = options;
 	const results: ListResult[] = [];
 
 	if (allowReuse) {
 		for (let i = 0; i < listCount; i++) {
-			results.push(selectBalancedList(pool, target, size, refinementPasses));
+			results.push(
+				selectBalancedList(
+					pool,
+					target,
+					size,
+					refinementPasses,
+					seed === undefined ? undefined : `${seed}|${i}`
+				)
+			);
 		}
 		return results;
 	}
 
 	let remaining = [...pool];
 	for (let i = 0; i < listCount; i++) {
-		const result = selectBalancedList(remaining, target, size, refinementPasses);
+		const result = selectBalancedList(
+			remaining,
+			target,
+			size,
+			refinementPasses,
+			seed === undefined ? undefined : `${seed}|${i}`
+		);
 		results.push(result);
 		const consumed = new Set(result.items);
 		remaining = remaining.filter((word) => !consumed.has(word));

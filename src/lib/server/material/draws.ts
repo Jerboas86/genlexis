@@ -182,6 +182,11 @@ export async function createDraw(
 	}
 
 	const forbidden = new Set(await dependencies.repository.resolveExcludedItems(excludedDrawIds));
+	// The identity keys are `itemId@itemRevision`, and the item id is the sentence
+	// id. The balancer is told the sentences so it never picks them; the identity
+	// check below stays as the backstop, because a sentence whose text changed is
+	// a different revision and only the key can tell.
+	const excludedSentenceIds = [...forbidden].map((key) => Number(key.split('@')[0]));
 	const generate = dependencies.generate ?? generateBalancedAcceptedSentences;
 	const now = dependencies.now ?? Date.now;
 	const newSeed = dependencies.newSeed ?? ((attempt: number) => `${createDrawId()}-${attempt}`);
@@ -206,6 +211,7 @@ export async function createDraw(
 				length: configuration.length,
 				listCount: 1,
 				itemsPerList: configuration.itemsPerList,
+				excludedSentenceIds,
 				seed
 			},
 			dependencies.generationRepository

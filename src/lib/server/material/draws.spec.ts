@@ -6,7 +6,7 @@ import {
 	type DrawRepository,
 	type StoredDraw
 } from './draws';
-import { itemIdentityKey } from './fingerprint';
+import { itemIdentityKey, itemRevisionOf } from './fingerprint';
 import { PUBLISHED_REVISIONS } from './registry';
 
 const REVISION = PUBLISHED_REVISIONS[0]!;
@@ -289,6 +289,51 @@ describe('an incomplete pool', () => {
 		await expect(createDraw(request(), dependencies({ generate }))).rejects.toMatchObject({
 			code: 'incomplete_draw'
 		});
+	});
+});
+
+describe('a corrected sentence', () => {
+	it('does not change what an already-served draw reports', async () => {
+		// `itemRevision` is derived from the text, so a replay that re-read the
+		// sentence would return the new text under the old revision — two fields
+		// contradicting each other in a record that claims to be immutable.
+		const repository = new MemoryRepository();
+		const deps = dependencies({ repository });
+		const first = await createDraw(request(), deps);
+
+		// The corpus moves on: the same ids now carry different sentences.
+		const corrected = dependencies({
+			repository,
+			generate: (() => {
+				let cursor = 0;
+				return vi.fn(async (options: { itemsPerList: number }) => {
+					const list = Array.from({ length: options.itemsPerList }, () => {
+						const index = cursor++;
+						return { sentenceId: index, sentence: `phrase corrigée ${index}`, pattern: 'np_verb' };
+					});
+					return {
+						lists: [list],
+						requestedLists: 1,
+						requestedItemsPerList: options.itemsPerList,
+						totalItems: list.length,
+						scores: [0.01],
+						aggregateScore: 0.01,
+						poolSize: 500
+					};
+				}) as unknown as DrawDependencies['generate'];
+			})()
+		});
+
+		const replayed = await createDraw(request(), corrected);
+		expect(replayed.items).toEqual(first.items);
+		for (const item of replayed.items) expect(item.text).not.toContain('corrigée');
+	});
+
+	it('produces a different identity for the corrected text', async () => {
+		// The correction is not lost — it simply belongs to a *new* item.
+		const before = await itemRevisionOf('le chat dort');
+		const after = await itemRevisionOf('le chat dors');
+		expect(after).not.toBe(before);
 	});
 });
 

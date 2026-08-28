@@ -21,8 +21,18 @@
 	"vars": {
 		"ORIGIN": "https://genlexis.com"
 	},
+	// Drives the generated env types and warns in local dev when one is missing.
+	// It does not gate a deploy, so a name may be listed before it is provisioned.
 	"secrets": {
-		"required": ["PRIVATE_DATABASE_URL", "BETTER_AUTH_SECRET"]
+		"required": [
+			"PRIVATE_DATABASE_URL",
+			"BETTER_AUTH_SECRET",
+			// The server-to-server credentials of the material contract. The two
+			// `_PREVIOUS` names are absent on purpose: they exist only during a
+			// rotation, and listing them would warn on every ordinary run.
+			"PRIVATE_MATERIAL_API_TOKEN",
+			"PRIVATE_MATERIAL_SIGNING_SECRET"
+		]
 	},
 	"workers_dev": true,
 	"preview_urls": true

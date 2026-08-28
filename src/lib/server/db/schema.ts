@@ -19,6 +19,21 @@ import {
 
 const aud = pgSchema('aud');
 
+/**
+ * The schema this repository owns outright.
+ *
+ * `aud` is shared with Helixum, which declares twelve tables here that this file
+ * does not — so `drizzle-kit push` from either side proposes to drop the other's.
+ * A schema with a single owner is the only shape that makes `push` safe by
+ * construction rather than by discipline: a repository that does not declare a
+ * schema cannot delete anything in it.
+ *
+ * This is the first brick of the split described in
+ * `specs/shared-database-ownership.md` (Helixum repository). Everything new that
+ * belongs to Genlexis goes here.
+ */
+const genlexis = pgSchema('genlexis');
+
 const langCode = customType<{ data: string; driverData: string }>({
 	dataType() {
 		return 'aud.lang_code';
@@ -315,7 +330,7 @@ export const sentenceAcceptance = aud.view('sentence_acceptance', {
  * A row is never updated. A correction publishes a new draw, and the old one
  * keeps naming exactly what it served.
  */
-export const materialDraws = aud.table(
+export const materialDraws = genlexis.table(
 	'material_draws',
 	{
 		/** Opaque, random and non-derivable — never a sequence. */
@@ -348,7 +363,7 @@ export const materialDraws = aud.table(
 	(t) => [index('material_draws_protocol_idx').on(t.protocolRevision, t.issuedAt)]
 );
 
-export const materialDrawItems = aud.table(
+export const materialDrawItems = genlexis.table(
 	'material_draw_items',
 	{
 		drawId: text('draw_id')
@@ -361,6 +376,16 @@ export const materialDrawItems = aud.table(
 		 * construction rather than by anyone remembering to bump a column.
 		 */
 		itemRevision: text('item_revision').notNull(),
+		/**
+		 * The text as it was served.
+		 *
+		 * Stored rather than re-read from `generated_sentences`, because
+		 * `item_revision` is derived from it: a sentence corrected after a draw
+		 * cited it would otherwise be replayed as the *new* text under the *old*
+		 * revision, and the two would contradict each other. A draw must keep
+		 * naming exactly what it served.
+		 */
+		text: text('text').notNull(),
 		sentenceId: bigint('sentence_id', { mode: 'number' }).notNull()
 	},
 	(t) => [
@@ -384,7 +409,7 @@ export const materialDrawItems = aud.table(
  * identifier. It is never a session or account identifier, and nothing here ties
  * it to a person.
  */
-export const materialIdempotency = aud.table(
+export const materialIdempotency = genlexis.table(
 	'material_idempotency',
 	{
 		idempotencyKey: text('idempotency_key').primaryKey(),
@@ -399,4 +424,17 @@ export const materialIdempotency = aud.table(
 	(t) => [index('material_idempotency_expiry_idx').on(t.expiresAt)]
 );
 
-export * from './auth.schema';
+/*
+ * There is deliberately no `auth` schema here.
+ *
+ * `auth.schema.ts` existed as an empty `export {}` and was re-exported from this
+ * file. Regenerating it — `pnpm auth:schema` does exactly that — would have made
+ * Genlexis declare the nine account tables of a database it *shares* with
+ * Helixum, and `drizzle-kit push` proposes to drop what a declared schema does
+ * not contain. Helixum owns those tables; this repository must never claim them.
+ *
+ * Nothing needs it at runtime: `drizzleAdapter(db, { provider: 'pg' })` is given
+ * no schema and uses better-auth's own mapping.
+ *
+ * See `specs/shared-database-ownership.md` in the Helixum repository.
+ */

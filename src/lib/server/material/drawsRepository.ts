@@ -27,8 +27,7 @@ type Database = typeof db;
 /** The persisted draw, rebuilt into the shape the contract publishes. */
 function toDraw(
 	row: typeof materialDraws.$inferSelect,
-	items: (typeof materialDrawItems.$inferSelect)[],
-	texts: Map<number, string>
+	items: (typeof materialDrawItems.$inferSelect)[]
 ): Draw {
 	return {
 		contractVersion: '1',
@@ -54,7 +53,8 @@ function toDraw(
 			.map((item) => ({
 				itemId: item.itemId,
 				itemRevision: item.itemRevision,
-				text: texts.get(item.sentenceId) ?? '',
+				// The text this draw served, not whatever the sentence says today.
+				text: item.text,
 				homonyms: []
 			})),
 		issuedAt: row.issuedAt.getTime()
@@ -85,11 +85,7 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 				.select()
 				.from(materialDrawItems)
 				.where(eq(materialDrawItems.drawId, entry.drawId));
-			const texts = await sentenceTexts(
-				database,
-				items.map((item) => item.sentenceId)
-			);
-			return { fingerprint: entry.fingerprint, draw: toDraw(row, items, texts) };
+			return { fingerprint: entry.fingerprint, draw: toDraw(row, items) };
 		},
 
 		async resolveExcludedItems(drawIds: readonly string[]): Promise<string[]> {
@@ -131,6 +127,7 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 						position,
 						itemId: item.itemId,
 						itemRevision: item.itemRevision,
+						text: item.text,
 						sentenceId: Number(item.itemId)
 					}))
 				);
@@ -140,16 +137,6 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 			});
 		}
 	};
-}
-
-async function sentenceTexts(database: Database, ids: number[]): Promise<Map<number, string>> {
-	if (ids.length === 0) return new Map();
-	const { generatedSentences } = await import('$lib/server/db/schema');
-	const rows = await database
-		.select({ id: generatedSentences.id, sentence: generatedSentences.sentence })
-		.from(generatedSentences)
-		.where(inArray(generatedSentences.id, ids));
-	return new Map(rows.map((row) => [row.id, row.sentence]));
 }
 
 /**

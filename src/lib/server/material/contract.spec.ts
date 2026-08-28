@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTRACT_VERSION, type DrawErrorCode } from './draws';
+import { canonicalRequest, verifyRequest } from './auth';
 import { PUBLISHED_REVISIONS, resolveProtocolRevision } from './registry';
 
 /**
@@ -25,9 +26,16 @@ interface Fixture {
 	response: { status: number; body: Record<string, unknown> };
 }
 
+/**
+ * The request/response fixtures.
+ *
+ * `signature-vector.json` is deliberately excluded: it pins the canonical
+ * request rather than a call, so it has no request body to check against the
+ * draw schema. It has its own suite at the bottom of this file.
+ */
 function fixtures(): Fixture[] {
 	return readdirSync(join(CONTRACT_DIR, 'fixtures'))
-		.filter((name) => name.endsWith('.json'))
+		.filter((name) => name.endsWith('.json') && name !== 'signature-vector.json')
 		.sort()
 		.map((name) => JSON.parse(readFileSync(join(CONTRACT_DIR, 'fixtures', name), 'utf8')));
 }
@@ -172,5 +180,71 @@ describe('the registry against the contract', () => {
 			expect(configuration.itemsPerList).toBeGreaterThan(0);
 			expect(configuration.itemsPerList).toBeLessThanOrEqual(limits.maxItemsPerDraw);
 		}
+	});
+});
+
+describe('the signing vector', () => {
+	/**
+	 * The one part of the contract no response fixture can check.
+	 *
+	 * The canonical request is built independently on each side from the same
+	 * document. If one of them changed the separator or added a field, every
+	 * fixture would still pass on both and every real call would fail with a
+	 * `401`. This turns that into arithmetic — and it goes through `verifyRequest`
+	 * rather than re-deriving the signature, so it exercises the path a real
+	 * caller takes.
+	 */
+	const vector = JSON.parse(
+		readFileSync(join(CONTRACT_DIR, 'fixtures', 'signature-vector.json'), 'utf8')
+	) as {
+		signingSecret: string;
+		request: { method: string; path: string; timestamp: number; body: string };
+		canonicalRequest: string;
+		signature: string;
+	};
+
+	const headersFor = (signature: string) =>
+		new Headers({
+			Authorization: 'Bearer the-token',
+			'X-Genlexis-Timestamp': String(vector.request.timestamp),
+			'X-Genlexis-Signature': signature
+		});
+
+	it('builds the canonical request the document specifies', () => {
+		const { method, path, timestamp, body } = vector.request;
+		expect(canonicalRequest(method, path, timestamp, body)).toBe(vector.canonicalRequest);
+	});
+
+	it('accepts the signature a conforming client produces', async () => {
+		const result = await verifyRequest(
+			{ token: 'the-token', signingSecret: vector.signingSecret },
+			{
+				method: vector.request.method,
+				path: vector.request.path,
+				headers: headersFor(vector.signature)
+			},
+			vector.request.body,
+			vector.request.timestamp
+		);
+		expect(result).toEqual({ ok: true });
+	});
+
+	it('refuses a signature over a body that differs by one character', async () => {
+		// Built by substitution rather than by string replacement, so the tamper
+		// cannot silently become a no-op if the fixture's contents change.
+		const tampered = `${vector.request.body.slice(0, -1)} `;
+		expect(tampered).not.toBe(vector.request.body);
+
+		const result = await verifyRequest(
+			{ token: 'the-token', signingSecret: vector.signingSecret },
+			{
+				method: vector.request.method,
+				path: vector.request.path,
+				headers: headersFor(vector.signature)
+			},
+			tampered,
+			vector.request.timestamp
+		);
+		expect(result).toEqual({ ok: false, reason: 'bad_signature' });
 	});
 });

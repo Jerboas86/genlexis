@@ -1,10 +1,10 @@
 {
   "contractVersion": "1",
-  "contractHash": "72ae0b3b2e0ab89aa985ba3442246dcbc5efa2ba7b176326d790d4ba3f3997cc",
+  "contractHash": "4a77d324302eea05bc4814785abcd55da81337afb1b3bc9be50bd2411f99e0af",
   "files": [
     {
       "file": "openapi.yaml",
-      "sha256": "fde9d25270d60b377000650cf2874249d9b7a16c99b97882bf193c2905b38e01"
+      "sha256": "882a2f46d48ace45e7d7bf760588df13f30fa1f692ebafaa1bc56a47db5b78bc"
     },
     {
       "file": "limits.json",
@@ -73,6 +73,10 @@
     {
       "file": "fixtures/error-unsupported-contract-version.json",
       "sha256": "baf4a744c9d383757870722d1e5616293bd5c395768bc8a6381f4f649c8f5907"
+    },
+    {
+      "file": "fixtures/signature-vector.json",
+      "sha256": "ae210260e01c45e6f48b95f117cb40c78854c4a264abd2f8b2726352c3588b62"
     }
   ]
 }

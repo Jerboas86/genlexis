@@ -1,0 +1,25 @@
+{
+  "name": "signature-vector",
+  "contractVersion": "1",
+  "why": "The canonical request is the one thing no response fixture can check. Both sides build it independently, so a divergence in the separator or the field order leaves every test green on each side and fails every real call. This pins it with an arithmetic answer.",
+  "canonicalForm": {
+    "fields": [
+      "METHOD (upper case)",
+      "PATH (no query, no host)",
+      "TIMESTAMP (seconds, as decimal text)",
+      "BODY (verbatim, as sent)"
+    ],
+    "separator": "\\n",
+    "note": "The body is signed exactly as transmitted. Re-serialising it before signing or before verifying compares a normalised form against a signature taken over the original."
+  },
+  "algorithm": "HMAC-SHA-256, lowercase hex",
+  "signingSecret": "genlexis-contract-v1-test-vector-secret",
+  "request": {
+    "method": "POST",
+    "path": "/v1/draws",
+    "timestamp": 1756300000,
+    "body": "{\"contractVersion\":\"1\",\"protocolRevision\":\"genlexis-fr-np-verb-r1\",\"idempotencyKey\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"excludedDrawIds\":[\"cccccccccccccccccccccccccccccccc\"]}"
+  },
+  "canonicalRequest": "POST\n/v1/draws\n1756300000\n{\"contractVersion\":\"1\",\"protocolRevision\":\"genlexis-fr-np-verb-r1\",\"idempotencyKey\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"excludedDrawIds\":[\"cccccccccccccccccccccccccccccccc\"]}",
+  "signature": "ab30685f66fe8921379cd5e47a23956f4345020022fd755535a3145998735453"
+}

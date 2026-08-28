@@ -54,8 +54,11 @@ paths:
         sorted, de-duplicated set of excluded draw ids — beside the result. The
         same key with the same fingerprint returns exactly the same draw; the
         same key with any other fingerprint returns `idempotency_conflict`.
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+
+        The key travels in the body and **only** there. Carrying it in an
+        `Idempotency-Key` header as well would mean two places that must agree,
+        and a rule that they must — which is a failure mode rather than a
+        convention.
       requestBody:
         required: true
         content:
@@ -84,19 +87,32 @@ components:
       description: |
         A shared secret held in the caller's secret manager, presented as a
         bearer token and accompanied by `X-Genlexis-Timestamp` and
-        `X-Genlexis-Signature` — an HMAC-SHA-256 over the canonical request.
-        Two secrets are accepted at once so a rotation never has a gap.
+        `X-Genlexis-Signature`. Two secrets are accepted at once so a rotation
+        never has a gap.
 
-  parameters:
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      description: |
-        Also carried in the body as `idempotencyKey`; the two must be equal. It
-        is derived by the caller from a stable preparation identifier and must
-        never be derived from the exclusions themselves.
-      schema: { $ref: "#/components/schemas/IdempotencyKey" }
+        **The canonical request.** The signature is an HMAC-SHA-256, lowercase
+        hex, over four fields joined by a single `\n`:
+
+        ```
+        METHOD      upper case, e.g. POST
+        PATH        no query string, no host, e.g. /v1/draws
+        TIMESTAMP   seconds since the epoch, as decimal text
+        BODY        verbatim, exactly as transmitted
+        ```
+
+        The body is signed **as sent**. Re-serialising it before signing, or
+        before verifying, compares a normalised form against a signature taken
+        over the original, and the two differ on nothing more than key order.
+
+        Signing only the bearer would leave a captured request replayable
+        against another path or with an edited body; the timestamp is what bounds
+        replay of the signature itself. A server accepts a skew of 300 seconds.
+
+        `fixtures/signature-vector.json` pins this with a worked example — a test
+        secret, a request, and the signature both sides must produce. It is the
+        one part of this contract that no response fixture can check, because
+        each side builds it independently and a divergence leaves every test
+        green on both.
 
   responses:
     BadRequest:

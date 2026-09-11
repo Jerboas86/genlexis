@@ -78,29 +78,46 @@ const REVISIONS: Readonly<Record<string, ProtocolConfiguration>> = {
 	'genlexis-fr-np-verb-r1': {
 		materialSourceId: 'genlexis-fr',
 		materialRelease: 'r1',
-		poolRevision: 'pool-2026-08-27',
+		// The corpus this revision draws against, now complete: every generated
+		// `np_verb` sentence has been judged, leaving 1924 accepted at medium density
+		// in production. The label moves with the corpus, because a draw replayed
+		// against a different pool is not the same measurement even under the same
+		// seed — `poolRevision` is part of the protocol's identity, not a comment.
+		poolRevision: 'pool-2026-09-11',
 		language: 'fr-FR',
 		pattern: 'np_verb',
 		lexicalDensity: 'medium',
 		itemsPerList: 20,
-		// Measured, not chosen: over 200 seeds against the accepted `np_verb`
-		// corpus at medium density (145 sentences on 2026-08-29) the distance ran
-		// min 0.1258, median 0.1458, p90 0.1590, max 0.1804. The previous 0.08 was
-		// a placeholder below the whole distribution, so every draw was refused
-		// with `balance_tolerance_exceeded` — in production as much as anywhere,
-		// the corpus being the same.
+		// Measured against the finished corpus, and measured at the case that binds.
 		//
-		// Set at the p90 so that a single attempt succeeds nine times in ten and
-		// the eight attempts effectively never exhaust, while the tolerance stays a
-		// real gate: a corpus that degraded would still be refused rather than
-		// served. It is expected to tighten as the corpus grows, which is a new
-		// revision rather than an edit to this one — this value could be corrected
-		// in place only because nothing had ever consumed it.
+		// The tempting reference is a fresh draw, and it is the wrong one: the service
+		// must also serve the fourth session, which avoids the three before it, and
+		// that is where the balancer works hardest. Over 40 draws at each depth
+		// (1772 drawable sentences, 2026-09-11):
 		//
-		// §16 (9) of `listening-conditions.md` still owns the clinical figure; this
-		// is what the material can currently deliver, not what the instrument
-		// should ultimately require.
-		phonemeBalanceTolerance: 0.16,
+		//   excluded draws   p50     p90     worst
+		//   0                0.0829  0.0956  0.1042
+		//   1                0.0865  0.1049  0.1116
+		//   2                0.0876  0.1055  0.1079
+		//   3                0.0972  0.1126  0.1228
+		//
+		// 0.13 sits above every one of the 160 draws observed, the worst being 0.1228,
+		// leaving about 6% of margin. That margin is deliberate rather than timid: the
+		// corpus can shrink as human votes contradict the judge — production and dev
+		// already differ by 11 sentences for exactly that reason — and a shrinking
+		// corpus pushes these distances back up. A tolerance that refused 2% of draws
+		// today would refuse more later, and this value cannot be revisited.
+		//
+		// It cannot be revisited because it is hashed into the protocol's identity on
+		// the consumer's side, and two sessions are comparable only when those hashes
+		// match. Changing it would sever every patient's baseline from their own
+		// follow-ups. The earlier values — 0.08, then 0.16 — could be corrected in
+		// place only because nothing had ever consumed them.
+		//
+		// §16 (9) of `listening-conditions.md` still owns the clinical figure; this is
+		// what the material delivers, not what the instrument should ultimately
+		// require.
+		phonemeBalanceTolerance: 0.13,
 		maxDrawAttempts: 8
 	}
 };

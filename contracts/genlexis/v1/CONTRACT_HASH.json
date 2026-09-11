@@ -1,6 +1,6 @@
 {
   "contractVersion": "1",
-  "contractHash": "8e7b27ae717ec4f52279057375891251617c513e40bc70fc0cf8f68065ffd54e",
+  "contractHash": "a8da4baa5c8ffa3161266b12ca01bedba774843d2fb6e46df723067f776a5009",
   "files": [
     {
       "file": "openapi.yaml",
@@ -12,7 +12,7 @@
     },
     {
       "file": "fixtures/draw-excluded-draw-id.json",
-      "sha256": "c0910e2edf90817b8314481d7ed13825c369306b4afafd0e351e57f553726579"
+      "sha256": "14b8f19e79ca6eb9c61a158f0ebfd8813b776f98e332c3cdbdb1ca9c67defc04"
     },
     {
       "file": "fixtures/draw-overlapping-item.json",
@@ -20,11 +20,11 @@
     },
     {
       "file": "fixtures/draw-success-maximal.json",
-      "sha256": "4de9632a17df8bd5ee6d683a1fcd109461bc4b054986ebdcb471a1d0724bb443"
+      "sha256": "f8818e647eaeea2788fec03851d62ac77da4120e0cf210fa83f6b14ac7cc0ea5"
     },
     {
       "file": "fixtures/draw-success-minimal.json",
-      "sha256": "6247f1260ba7cfa032a4764abacda1c3b7c7ea86d8a722f1b084a835b718cb45"
+      "sha256": "14dba0e4b89245a3386a7f6dfce5c558ffaf3bc2ebea84a51100ffa19878c889"
     },
     {
       "file": "fixtures/error-balance-tolerance-exceeded.json",
@@ -36,7 +36,7 @@
     },
     {
       "file": "fixtures/error-duplicate-exclusions-are-canonical.json",
-      "sha256": "c96149204b6361057e9d835cff35d509b641bb0f28e41125308dad546daa4765"
+      "sha256": "49d764db94aaf930b5c4b3ad56ef27e714adda5b190aa9b5819e761136d3bb97"
     },
     {
       "file": "fixtures/error-idempotency-conflict.json",

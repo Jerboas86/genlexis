@@ -38,8 +38,8 @@
           "itemsPerList": 1,
           "listCount": 1
         },
-        "phonemeBalanceDistance": 0.1458,
-        "phonemeBalanceTolerance": 0.16
+        "phonemeBalanceDistance": 0.0865,
+        "phonemeBalanceTolerance": 0.13
       },
       "items": [
         {

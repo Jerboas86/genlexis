@@ -108,10 +108,13 @@ describe('the protocol revision', () => {
 
 	it('reports the release and pool the revision fixed, not anything the caller asked for', async () => {
 		const draw = await createDraw(request(), dependencies());
+		// Read from the registry rather than repeated here: the claim is that the
+		// draw reports the revision's own release and pool, not which pool that is.
+		const configuration = resolveProtocolRevision(PUBLISHED_REVISIONS[0]!)!;
 		expect(draw.materialRelease).toEqual({
-			sourceId: 'genlexis-fr',
-			revision: 'r1',
-			poolRevision: 'pool-2026-08-27'
+			sourceId: configuration.materialSourceId,
+			revision: configuration.materialRelease,
+			poolRevision: configuration.poolRevision
 		});
 	});
 

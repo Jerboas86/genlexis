@@ -106,21 +106,20 @@ describe.skipIf(!enabled)('a draw against a real database', () => {
 	});
 
 	/**
-	 * Rotation needs a corpus, not just a pool.
+	 * Rotation needs the balancer to see the corpus, not just to have one.
 	 *
-	 * Excluding a draw removes 20 sentences, and on a thin corpus the balance of
-	 * what remains degrades fast. Measured against the 145 accepted `np_verb`
-	 * sentences at medium density on 2026-08-29, the p90 distance ran 0.162 with
-	 * nothing excluded, 0.208 after one draw, 0.260 after two and 0.334 after
-	 * three — while the revision publishes 0.16. A single tolerance cannot cover
-	 * both a fresh draw and a third rotated one without ceasing to mean anything.
+	 * This case was skipped for a while on the reading that 145 accepted sentences
+	 * were simply too few. That was half the story. The pool the balancer was shown
+	 * was capped at 200, so once the corpus grew past that the extra sentences were
+	 * fetched at random and mostly discarded — and excluding an earlier draw then
+	 * removed a large slice of the little that was visible. Lifting the cap is what
+	 * made rotation work; the corpus growing was necessary but not sufficient.
 	 *
-	 * So this case is skipped, loudly, until the corpus can carry it. The
-	 * threshold is an estimate, not a measurement: keeping a three-draw window
-	 * (60 sentences) under a tenth of the corpus is what would hold the
-	 * degradation near the un-excluded case.
+	 * Verified passing against 544 accepted `np_verb` sentences at medium density.
+	 * The threshold below is that verified floor rather than a measured cliff: a
+	 * thinner corpus is untested here, not known to fail.
 	 */
-	const CORPUS_FOR_ROTATION = 600;
+	const CORPUS_FOR_ROTATION = 500;
 
 	it('rotates away from every item of an excluded draw', async ({ skip }) => {
 		const { resolveProtocolRevision } = await import('./registry');

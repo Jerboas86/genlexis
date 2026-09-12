@@ -53,11 +53,7 @@
 			"routes": [],
 			// `vars` is not inherited. Without this, ORIGIN is undefined here, and
 			// better-auth builds its cookies from it.
-			//
-			// The value is known only after the first deploy prints the workers.dev
-			// hostname, so the sequence is: deploy once, read the URL, fill this in,
-			// deploy again.
-			"vars": { "ORIGIN": "https://genlexis-stg.REMPLIR.workers.dev" },
+			"vars": { "ORIGIN": "https://genlexis-stg.benoitdelemps.workers.dev" },
 			// Not inherited either. Repeated so a missing secret still warns here.
 			"secrets": {
 				"required": [

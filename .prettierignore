@@ -19,3 +19,8 @@ contracts/
 
 # Build output: formatting generated declarations reports on tsc, not on anyone.
 libs/*/dist
+
+# Quality baselines, written and rewritten by `fallow`: formatting them reports
+# on the tool, not on anyone, and prettier failing here was hiding eslint, which
+# runs only after it passes.
+.fallow/

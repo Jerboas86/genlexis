@@ -56,15 +56,6 @@ function parseArguments() {
 	return { from, to, apply };
 }
 
-/** Runs psql against one Doppler config and returns stdout. */
-function psql(config, args) {
-	return execFileSync(
-		'doppler',
-		['run', '-p', 'genlexis', '-c', config, '--', 'psql', '$PRIVATE_DATABASE_URL', ...args],
-		{ encoding: 'utf8', shell: false, env: { ...process.env } }
-	);
-}
-
 /**
  * `psql` needs the connection string expanded by a shell, and passing it through
  * `sh -c` keeps the secret out of this process's argument list.

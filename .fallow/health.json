@@ -1,0 +1,84 @@
+{
+  "finding_counts": {
+    "libs/genlexis-core/src/adapters/drizzle.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "libs/genlexis-core/src/phonemes/balancer.ts": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/postprocess-generated-files.mjs": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/lib/server/genlexis/repository.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/routes/classify/+page.svelte": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/routes/classify/data.remote.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/routes/demo/better-auth/login/+page.server.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/routes/generate/+page.svelte": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/routes/generate/data.remote.ts": {
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "tests/e2e/seed.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    }
+  },
+  "runtime_coverage_findings": [],
+  "target_keys": [
+    "libs/genlexis-core/src/phonemes/balancer.ts:complexity",
+    "libs/genlexis-core/src/phonemes/distribution.ts:high impact",
+    "src/routes/generate/+page.svelte:complexity"
+  ]
+}

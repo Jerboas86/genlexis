@@ -27,5 +27,12 @@ test-results
 src/lib/paraglide
 project.inlang/cache/
 
+# Fallow. The JSON files are the quality baselines the pre-push audit compares
+# against, and they are tracked — force-added once, because the tool writes a
+# `.fallow/.gitignore` of `*` on every run and would otherwise hide them. The
+# caches stay out.
+.fallow/*.bin
+.fallow/cache
+
 # vitest coverage, produced for the fallow audit
 coverage/

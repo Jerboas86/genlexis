@@ -196,11 +196,11 @@ export const seedE2eFixtures = async () => {
 
 	for (const entry of lexicalEntries) {
 		await sql`
-			INSERT INTO aud.lexical_entries (
+			INSERT INTO genlexis.lexical_entries (
 				language, source, source_ref, surface, gender, number, category,
 				phoneme_count, syllable_count, pld20
 			) VALUES (
-				${LANGUAGE}::aud.lang_code,
+				${LANGUAGE}::genlexis.lang_code,
 				${SOURCE_MARKER},
 				${entry.ref},
 				${entry.surface},
@@ -216,15 +216,15 @@ export const seedE2eFixtures = async () => {
 
 	for (const spec of sentences) {
 		await sql`
-			INSERT INTO aud.generated_sentences (language, sentence, pattern)
-			VALUES (${LANGUAGE}::aud.lang_code, ${spec.sentence}, ${spec.pattern})
+			INSERT INTO genlexis.generated_sentences (language, sentence, pattern)
+			VALUES (${LANGUAGE}::genlexis.lang_code, ${spec.sentence}, ${spec.pattern})
 		`;
 
 		for (let i = 0; i < spec.tokens.length; i++) {
 			const token = spec.tokens[i];
 			const surface = lexicalEntries.find((e) => e.ref === token.entryRef)!.surface;
 			await sql`
-				INSERT INTO aud.generated_sentence_tokens (
+				INSERT INTO genlexis.generated_sentence_tokens (
 					sentence_id, language, position, slot, surface, lexical_entry_id
 				)
 				SELECT
@@ -234,36 +234,36 @@ export const seedE2eFixtures = async () => {
 					${token.slot},
 					${surface},
 					le.id
-				FROM aud.generated_sentences s
-				JOIN aud.lexical_entries le
+				FROM genlexis.generated_sentences s
+				JOIN genlexis.lexical_entries le
 					ON le.language = s.language
 					AND le.source = ${SOURCE_MARKER}
 					AND le.source_ref = ${token.entryRef}
-				WHERE s.language = ${LANGUAGE}::aud.lang_code
+				WHERE s.language = ${LANGUAGE}::genlexis.lang_code
 					AND s.sentence = ${spec.sentence}
 			`;
 		}
 
 		if (spec.llm) {
 			await sql`
-				INSERT INTO aud.generated_sentence_classifications (
+				INSERT INTO genlexis.generated_sentence_classifications (
 					sentence_id, judge_type, appropriate, grammatical, semantics, classifier_model
 				)
 				SELECT s.id, 'llm', ${spec.llm.appropriate}, ${spec.llm.grammatical},
 					${spec.llm.semantics}, ${SOURCE_MARKER}
-				FROM aud.generated_sentences s
-				WHERE s.language = ${LANGUAGE}::aud.lang_code
+				FROM genlexis.generated_sentences s
+				WHERE s.language = ${LANGUAGE}::genlexis.lang_code
 					AND s.sentence = ${spec.sentence}
 			`;
 		}
 
 		// Two acceptable votes → satisfies the ≥1-vote majority-accept rule.
 		await sql`
-			INSERT INTO aud.generated_sentence_classifications (sentence_id, judge_type, overall_acceptable)
+			INSERT INTO genlexis.generated_sentence_classifications (sentence_id, judge_type, overall_acceptable)
 			SELECT s.id, 'human', v.overall_acceptable
-			FROM aud.generated_sentences s
+			FROM genlexis.generated_sentences s
 			CROSS JOIN (VALUES (true), (true)) AS v(overall_acceptable)
-			WHERE s.language = ${LANGUAGE}::aud.lang_code
+			WHERE s.language = ${LANGUAGE}::genlexis.lang_code
 				AND s.sentence = ${spec.sentence}
 		`;
 	}
@@ -288,14 +288,14 @@ export const seedE2eFixtures = async () => {
 export const classificationHighWaterMark = async (): Promise<number> => {
 	const sql = getClient();
 	const rows =
-		await sql`SELECT COALESCE(MAX(id), 0)::int AS id FROM aud.generated_sentence_classifications`;
+		await sql`SELECT COALESCE(MAX(id), 0)::int AS id FROM genlexis.generated_sentence_classifications`;
 	return (rows[0] as { id: number }).id;
 };
 
 /** Removes every classification written since the given mark. */
 export const rollbackClassificationsAfter = async (mark: number): Promise<void> => {
 	const sql = getClient();
-	await sql`DELETE FROM aud.generated_sentence_classifications WHERE id > ${mark}`;
+	await sql`DELETE FROM genlexis.generated_sentence_classifications WHERE id > ${mark}`;
 };
 
 export const cleanupE2eFixtures = async () => {
@@ -303,21 +303,21 @@ export const cleanupE2eFixtures = async () => {
 
 	for (const spec of sentences) {
 		await sql`
-			DELETE FROM aud.generated_sentences
-			WHERE language = ${LANGUAGE}::aud.lang_code
+			DELETE FROM genlexis.generated_sentences
+			WHERE language = ${LANGUAGE}::genlexis.lang_code
 				AND sentence = ${spec.sentence}
 		`;
 	}
 
 	await sql`
-		DELETE FROM aud.generated_sentences
+		DELETE FROM genlexis.generated_sentences
 		WHERE id IN (
 			SELECT s.id
-			FROM aud.generated_sentences s
-			JOIN aud.generated_sentence_tokens t ON t.sentence_id = s.id
-			JOIN aud.lexical_entries le ON le.id = t.lexical_entry_id
+			FROM genlexis.generated_sentences s
+			JOIN genlexis.generated_sentence_tokens t ON t.sentence_id = s.id
+			JOIN genlexis.lexical_entries le ON le.id = t.lexical_entry_id
 			WHERE le.source = ${SOURCE_MARKER}
 		)
 	`;
-	await sql`DELETE FROM aud.lexical_entries WHERE source = ${SOURCE_MARKER}`;
+	await sql`DELETE FROM genlexis.lexical_entries WHERE source = ${SOURCE_MARKER}`;
 };

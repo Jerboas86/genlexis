@@ -178,8 +178,8 @@ describe('findLeastVotedValidationCandidate', () => {
 		// them, so a rename would otherwise only fail in production.
 		nextRows = [row];
 		await repository.findLeastVotedValidationCandidate();
-		expect(executed[0].sql).toContain('aud.human_classification_summaries');
-		expect(executed[0].sql).toContain('aud.latest_llm_classifications');
+		expect(executed[0].sql).toContain('genlexis.human_classification_summaries');
+		expect(executed[0].sql).toContain('genlexis.latest_llm_classifications');
 	});
 
 	it('binds a pattern filter as a parameter rather than interpolating it', async () => {

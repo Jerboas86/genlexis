@@ -4,7 +4,6 @@ import {
 	bigserial,
 	boolean,
 	check,
-	customType,
 	foreignKey,
 	index,
 	integer,
@@ -17,37 +16,33 @@ import {
 	uniqueIndex
 } from 'drizzle-orm/pg-core';
 
-const aud = pgSchema('aud');
-
 /**
- * The schema this repository owns outright.
- *
- * `aud` is shared with Helixum, which declares twelve tables here that this file
- * does not — so `drizzle-kit push` from either side proposes to drop the other's.
- * A schema with a single owner is the only shape that makes `push` safe by
- * construction rather than by discipline: a repository that does not declare a
- * schema cannot delete anything in it.
- *
- * This is the first brick of the split described in
- * `specs/shared-database-ownership.md` (Helixum repository). Everything new that
- * belongs to Genlexis goes here.
+ * The schema this repository owns outright — and, since lot C of
+ * `specs/shared-database-ownership.md` (Helixum repository), the only one it
+ * declares. `aud` is Helixum's. A repository that does not declare a schema
+ * cannot delete anything in it, which is what makes `drizzle-kit push` safe
+ * by construction rather than by discipline.
  */
 export const genlexis = pgSchema('genlexis');
 
 /**
- * The corpus tables' language column, typed by an enum that lives in `aud`.
+ * The language of a corpus row.
  *
- * Named by string rather than declared: these tables are read here and pushed
- * by nobody, and `aud` is outside `schemaFilter`. No table in the `genlexis`
- * schema uses this type — see `database/002-material-draws-language-text.sql`.
+ * Declared and exported so drizzle-kit sees it — it only sees exports — and
+ * declared here rather than in `aud`, where the same enum still serves
+ * Helixum's tables: a `genlexis` column typed by an `aud` type is a dependency
+ * across the ownership line, and drizzle-kit cannot even represent it.
  */
-const langCode = customType<{ data: string; driverData: string }>({
-	dataType() {
-		return 'aud.lang_code';
-	}
-});
+export const langCode = genlexis.enum('lang_code', [
+	'fr-FR',
+	'en-US',
+	'en-GB',
+	'es-ES',
+	'de-DE',
+	'it-IT'
+]);
 
-export const lexicalEntries = aud.table(
+export const lexicalEntries = genlexis.table(
 	'lexical_entries',
 	{
 		id: bigserial('id', { mode: 'number' }).primaryKey(),
@@ -97,14 +92,14 @@ export const lexicalEntries = aud.table(
 		check('lexical_entries_source_not_empty', sql`${t.source} <> ''`),
 		check('lexical_entries_surface_not_empty', sql`${t.surface} <> ''`),
 		unique('lexical_entries_source_ref_unique').on(t.language, t.source, t.sourceRef),
-		uniqueIndex('lexical_entries_id_language_idx').on(t.id, t.language),
+		unique('lexical_entries_id_language_idx').on(t.id, t.language),
 		index('lexical_entries_language_surface_idx').on(t.language, t.surface),
 		index('lexical_entries_language_lemma_idx').on(t.language, t.lemma),
 		index('lexical_entries_source_idx').on(t.source)
 	]
 );
 
-export const generatedSentences = aud.table(
+export const generatedSentences = genlexis.table(
 	'generated_sentences',
 	{
 		id: bigserial('id', { mode: 'number' }).primaryKey(),
@@ -115,12 +110,12 @@ export const generatedSentences = aud.table(
 	},
 	(t) => [
 		uniqueIndex('generated_sentences_language_sentence_idx').on(t.language, t.sentence),
-		uniqueIndex('generated_sentences_id_language_idx').on(t.id, t.language),
+		unique('generated_sentences_id_language_idx').on(t.id, t.language),
 		index('generated_sentences_pattern_idx').on(t.language, t.pattern)
 	]
 );
 
-export const generatedSentenceTokens = aud.table(
+export const generatedSentenceTokens = genlexis.table(
 	'generated_sentence_tokens',
 	{
 		sentenceId: bigint('sentence_id', { mode: 'number' }).notNull(),
@@ -131,12 +126,15 @@ export const generatedSentenceTokens = aud.table(
 		lexicalEntryId: bigint('lexical_entry_id', { mode: 'number' })
 	},
 	(t) => [
-		primaryKey({ columns: [t.sentenceId, t.position] }),
+		// Named as the database names them, so that `push` finds nothing to redo.
+		primaryKey({ name: 'generated_sentence_tokens_pkey', columns: [t.sentenceId, t.position] }),
 		foreignKey({
+			name: 'generated_sentence_tokens_sentence_id_language_fkey',
 			columns: [t.sentenceId, t.language],
 			foreignColumns: [generatedSentences.id, generatedSentences.language]
 		}).onDelete('cascade'),
 		foreignKey({
+			name: 'generated_sentence_tokens_lexical_entry_id_language_fkey',
 			columns: [t.lexicalEntryId, t.language],
 			foreignColumns: [lexicalEntries.id, lexicalEntries.language]
 		}),
@@ -149,13 +147,11 @@ export const generatedSentenceTokens = aud.table(
 	]
 );
 
-export const generatedSentenceClassifications = aud.table(
+export const generatedSentenceClassifications = genlexis.table(
 	'generated_sentence_classifications',
 	{
 		id: bigserial('id', { mode: 'number' }).primaryKey(),
-		sentenceId: bigint('sentence_id', { mode: 'number' })
-			.notNull()
-			.references(() => generatedSentences.id, { onDelete: 'cascade' }),
+		sentenceId: bigint('sentence_id', { mode: 'number' }).notNull(),
 		judgeType: text('judge_type').notNull(),
 		classifiedAt: timestamp('classified_at', { withTimezone: true }).notNull().defaultNow(),
 		appropriate: boolean('appropriate'),
@@ -173,6 +169,11 @@ export const generatedSentenceClassifications = aud.table(
 		notes: text('notes')
 	},
 	(t) => [
+		foreignKey({
+			name: 'generated_sentence_classifications_sentence_id_fkey',
+			columns: [t.sentenceId],
+			foreignColumns: [generatedSentences.id]
+		}).onDelete('cascade'),
 		check(
 			'generated_sentence_classifications_judge_type_check',
 			sql`${t.judgeType} IN ('llm', 'human')`
@@ -197,7 +198,30 @@ export const generatedSentenceClassifications = aud.table(
 	]
 );
 
-export const latestLlmClassifications = aud
+/**
+ * The phoneme distribution of a language, which every balanced draw reads.
+ *
+ * Declared for the first time: it used to be reached by a configuration string
+ * alone, declared by neither repository, and survived every push by being
+ * invisible rather than by being protected. Names follow the database.
+ */
+export const languagePhonemeDistributions = genlexis.table(
+	'language_phoneme_distributions',
+	{
+		language: langCode('language').notNull(),
+		phoneme: text('phoneme').notNull(),
+		frequency: numeric('frequency').notNull()
+	},
+	(t) => [
+		primaryKey({ name: 'language_phoneme_distributions_pk', columns: [t.language, t.phoneme] }),
+		check(
+			'language_phoneme_distributions_frequency_range',
+			sql`${t.frequency} >= 0 AND ${t.frequency} <= 1`
+		)
+	]
+);
+
+export const latestLlmClassifications = genlexis
 	.view('latest_llm_classifications', {
 		sentenceId: bigint('sentence_id', { mode: 'number' }),
 		appropriate: boolean('appropriate'),
@@ -212,7 +236,7 @@ export const latestLlmClassifications = aud
 	})
 	.existing();
 
-export const humanClassificationSummaries = aud
+export const humanClassificationSummaries = genlexis
 	.view('human_classification_summaries', {
 		sentenceId: bigint('sentence_id', { mode: 'number' }),
 		language: langCode('language'),
@@ -235,7 +259,7 @@ export const humanClassificationSummaries = aud
 	})
 	.existing();
 
-export const sentenceAcceptance = aud
+export const sentenceAcceptance = genlexis
 	.view('sentence_acceptance', {
 		sentenceId: bigint('sentence_id', { mode: 'number' }),
 		language: langCode('language'),

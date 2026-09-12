@@ -6,7 +6,7 @@
 -- Pourquoi ce fichier existe. La base de dev portait bien les 144 phrases
 -- `np_verb` de la production, avec leurs tokens `det`/`noun`/`verb`
 -- correctement liés au lexique — mais une seule classification. Or
--- `aud.sentence_acceptance` n'accepte une phrase de ce motif que si un juge LLM
+-- `genlexis.sentence_acceptance` n'accepte une phrase de ce motif que si un juge LLM
 -- l'a déclarée appropriée, grammaticale et de sémantique `natural` ou
 -- `plausible`. Sans ces lignes, dev n'offrait que 2 phrases tirables à densité
 -- moyenne quand la révision `genlexis-fr-np-verb-r1` en tire 20 : le service
@@ -185,19 +185,19 @@ INSERT INTO incoming VALUES
 	('Une sorcière colle.', true, true, 'plausible', 'gpt-5.4-mini', 'ceea00581e31b78478bac7e93d9f6e06da74c0464f6e10a56a95936463f75753', '2026-05-22 14:52:53.947013+00'::timestamptz),
 	('Une vedette rigole.', true, true, 'natural', 'gpt-5.4-mini', 'ceea00581e31b78478bac7e93d9f6e06da74c0464f6e10a56a95936463f75753', '2026-05-22 14:23:11.153852+00'::timestamptz);
 
-INSERT INTO aud.generated_sentence_classifications
+INSERT INTO genlexis.generated_sentence_classifications
     (sentence_id, judge_type, appropriate, grammatical, semantics,
      classifier_model, classifier_prompt_hash, classified_at)
 SELECT DISTINCT ON (g.id)
     g.id, 'llm', i.appropriate, i.grammatical, i.semantics,
     i.classifier_model, i.classifier_prompt_hash, i.classified_at
 FROM incoming i
-JOIN aud.generated_sentences g
+JOIN genlexis.generated_sentences g
     ON g.sentence = i.sentence
    AND g.language = 'fr-FR'
    AND g.pattern  = 'np_verb'
 WHERE NOT EXISTS (
-    SELECT 1 FROM aud.generated_sentence_classifications c
+    SELECT 1 FROM genlexis.generated_sentence_classifications c
     WHERE c.sentence_id = g.id AND c.judge_type = 'llm'
 )
 ORDER BY g.id;
@@ -207,8 +207,8 @@ COMMIT;
 -- Retour arrière : ne retire que les lignes que ce fichier a pu poser.
 --
 -- BEGIN;
---   DELETE FROM aud.generated_sentence_classifications c
---   USING aud.generated_sentences g
+--   DELETE FROM genlexis.generated_sentence_classifications c
+--   USING genlexis.generated_sentences g
 --   WHERE c.sentence_id = g.id AND c.judge_type = 'llm'
 --     AND g.pattern = 'np_verb' AND g.language = 'fr-FR'
 --     AND c.classifier_prompt_hash = 'ceea00581e31b78478bac7e93d9f6e06da74c0464f6e10a56a95936463f75753';

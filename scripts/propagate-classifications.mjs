@@ -91,7 +91,7 @@ function corpusFingerprint(config) {
 		'-tAF|',
 		'-c',
 		`SELECT md5(string_agg(sentence, E'\\n' ORDER BY sentence)), count(*), count(DISTINCT sentence)
-		 FROM aud.generated_sentences WHERE language = 'fr-FR'`
+		 FROM genlexis.generated_sentences WHERE language = 'fr-FR'`
 	]).trim();
 	const [digest, total, distinct] = out.split('|');
 	return { digest, total: Number(total), distinct: Number(distinct) };
@@ -102,7 +102,7 @@ function countJudged(config) {
 		run(config, [
 			'-q',
 			'-tAc',
-			`SELECT count(*) FROM aud.generated_sentence_classifications WHERE judge_type = 'llm'`
+			`SELECT count(*) FROM genlexis.generated_sentence_classifications WHERE judge_type = 'llm'`
 		]).trim()
 	);
 }
@@ -153,8 +153,8 @@ try {
 		`\\copy (SELECT g.sentence, c.appropriate, c.grammatical, c.semantics,
 		          c.classifier_model, c.classifier_prompt_hash, c.classified_at,
 		          c.reaction_p1, c.reaction_p2, c.reaction_p3, c.notes
-		        FROM aud.generated_sentence_classifications c
-		        JOIN aud.generated_sentences g ON g.id = c.sentence_id
+		        FROM genlexis.generated_sentence_classifications c
+		        JOIN genlexis.generated_sentences g ON g.id = c.sentence_id
 		        WHERE c.judge_type = 'llm' AND g.language = 'fr-FR') TO '${csv}' CSV HEADER`
 	]);
 
@@ -180,20 +180,20 @@ CREATE TEMP TABLE incoming_classifications (
 \\copy incoming_classifications FROM '${csv}' CSV HEADER
 SELECT 'SANS CORRESPONDANCE ' || count(*) FROM incoming_classifications i
 WHERE NOT EXISTS (
-    SELECT 1 FROM aud.generated_sentences g
+    SELECT 1 FROM genlexis.generated_sentences g
     WHERE g.sentence = i.sentence AND g.language = 'fr-FR'
 );
 SELECT 'DEJA JUGEES ' || count(*) FROM incoming_classifications i
-JOIN aud.generated_sentences g ON g.sentence = i.sentence AND g.language = 'fr-FR'
+JOIN genlexis.generated_sentences g ON g.sentence = i.sentence AND g.language = 'fr-FR'
 WHERE EXISTS (
-    SELECT 1 FROM aud.generated_sentence_classifications c
+    SELECT 1 FROM genlexis.generated_sentence_classifications c
     WHERE c.sentence_id = g.id AND c.judge_type = 'llm'
 );
 -- Counted through a CTE rather than read from psql's status line, which the
 -- quiet flag suppresses. It also reports the same number in dry-run, where the transaction
 -- is rolled back after the count is taken.
 WITH inserted AS (
-    INSERT INTO aud.generated_sentence_classifications
+    INSERT INTO genlexis.generated_sentence_classifications
         (sentence_id, judge_type, appropriate, grammatical, semantics,
          classifier_model, classifier_prompt_hash, classified_at,
          reaction_p1, reaction_p2, reaction_p3, notes)
@@ -201,9 +201,9 @@ WITH inserted AS (
            i.classifier_model, i.classifier_prompt_hash, i.classified_at,
            i.reaction_p1, i.reaction_p2, i.reaction_p3, i.notes
     FROM incoming_classifications i
-    JOIN aud.generated_sentences g ON g.sentence = i.sentence AND g.language = 'fr-FR'
+    JOIN genlexis.generated_sentences g ON g.sentence = i.sentence AND g.language = 'fr-FR'
     WHERE NOT EXISTS (
-        SELECT 1 FROM aud.generated_sentence_classifications c
+        SELECT 1 FROM genlexis.generated_sentence_classifications c
         WHERE c.sentence_id = g.id AND c.judge_type = 'llm'
     )
     RETURNING 1

@@ -21,13 +21,13 @@ type LlmRow = Omit<SentenceSummary, 'llm'> & {
 
 const generationRepository = createDrizzleGenerationRepository(db, {
 	schema: {
-		acceptanceView: 'aud.sentence_acceptance',
-		tokensTable: 'aud.generated_sentence_tokens',
-		lexicalEntriesTable: 'aud.lexical_entries',
-		phonemeDistributionTable: 'aud.language_phoneme_distributions',
-		classificationsTable: 'aud.generated_sentence_classifications',
-		humanSummariesView: 'aud.human_classification_summaries',
-		latestLlmView: 'aud.latest_llm_classifications'
+		acceptanceView: 'genlexis.sentence_acceptance',
+		tokensTable: 'genlexis.generated_sentence_tokens',
+		lexicalEntriesTable: 'genlexis.lexical_entries',
+		phonemeDistributionTable: 'genlexis.language_phoneme_distributions',
+		classificationsTable: 'genlexis.generated_sentence_classifications',
+		humanSummariesView: 'genlexis.human_classification_summaries',
+		latestLlmView: 'genlexis.latest_llm_classifications'
 	},
 	slots: { det: 'det', noun: 'noun', adj: 'adj', verb: 'verb' },
 	patterns: DEFAULT_PATTERNS,
@@ -52,8 +52,8 @@ const validationRepository = {
 				l.grammatical AS "llmGrammatical",
 				l.semantics AS "llmSemantics",
 				(l.sentence_id IS NOT NULL) AS "hasLlm"
-			FROM aud.human_classification_summaries h
-			LEFT JOIN aud.latest_llm_classifications l ON l.sentence_id = h.sentence_id
+			FROM genlexis.human_classification_summaries h
+			LEFT JOIN genlexis.latest_llm_classifications l ON l.sentence_id = h.sentence_id
 			WHERE h.pattern <> 'noun'
 			AND (h.pattern NOT IN ('det_noun_adj', 'np_verb') OR l.sentence_id IS NOT NULL)
 			${patternFilter}

@@ -121,35 +121,42 @@ describe.skipIf(!enabled)('a draw against a real database', () => {
 	 */
 	const CORPUS_FOR_ROTATION = 500;
 
-	it('rotates away from every item of an excluded draw', async ({ skip }) => {
-		const { resolveProtocolRevision } = await import('./registry');
-		const configuration = resolveProtocolRevision(revision)!;
-		const corpus = await generationRepository.findAcceptedItemsWithIpa({
-			language: configuration.language,
-			pattern: configuration.pattern,
-			lexicalDensity: configuration.lexicalDensity,
-			poolSize: CORPUS_FOR_ROTATION * 2
-		});
-		skip(
-			corpus.length < CORPUS_FOR_ROTATION,
-			`the accepted corpus holds ${corpus.length} sentences; rotating away from ` +
-				`${configuration.itemsPerList} of them cannot stay within the published ` +
-				`tolerance of ${configuration.phonemeBalanceTolerance} until it reaches ` +
-				`about ${CORPUS_FOR_ROTATION}`
-		);
+	// Three real draws in a row, each a balance pass over the whole corpus.
+	const ROTATION_BUDGET_MS = 30_000;
 
-		const first = await draw(`${'c'.repeat(48)}${Date.now().toString(16).padStart(16, '0')}`);
-		written.push(first.drawId);
-		const second = await draw(`${'d'.repeat(48)}${Date.now().toString(16).padStart(16, '0')}`, [
-			first.drawId
-		]);
-		written.push(second.drawId);
+	it(
+		'rotates away from every item of an excluded draw',
+		async ({ skip }) => {
+			const { resolveProtocolRevision } = await import('./registry');
+			const configuration = resolveProtocolRevision(revision)!;
+			const corpus = await generationRepository.findAcceptedItemsWithIpa({
+				language: configuration.language,
+				pattern: configuration.pattern,
+				lexicalDensity: configuration.lexicalDensity,
+				poolSize: CORPUS_FOR_ROTATION * 2
+			});
+			skip(
+				corpus.length < CORPUS_FOR_ROTATION,
+				`the accepted corpus holds ${corpus.length} sentences; rotating away from ` +
+					`${configuration.itemsPerList} of them cannot stay within the published ` +
+					`tolerance of ${configuration.phonemeBalanceTolerance} until it reaches ` +
+					`about ${CORPUS_FOR_ROTATION}`
+			);
 
-		const excluded = new Set(first.items.map((item) => `${item.itemId}@${item.itemRevision}`));
-		for (const item of second.items) {
-			expect(excluded.has(`${item.itemId}@${item.itemRevision}`)).toBe(false);
-		}
-	});
+			const first = await draw(`${'c'.repeat(48)}${Date.now().toString(16).padStart(16, '0')}`);
+			written.push(first.drawId);
+			const second = await draw(`${'d'.repeat(48)}${Date.now().toString(16).padStart(16, '0')}`, [
+				first.drawId
+			]);
+			written.push(second.drawId);
+
+			const excluded = new Set(first.items.map((item) => `${item.itemId}@${item.itemRevision}`));
+			for (const item of second.items) {
+				expect(excluded.has(`${item.itemId}@${item.itemRevision}`)).toBe(false);
+			}
+		},
+		ROTATION_BUDGET_MS
+	);
 
 	it('cleans up after itself', async () => {
 		const { inArray } = await import('drizzle-orm');

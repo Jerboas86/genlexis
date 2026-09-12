@@ -10,7 +10,8 @@
 	},
 	"scripts": {
 		"dev": "doppler run -p genlexis -c dev -- vite dev",
-		"build": "vite build",
+		"core:build": "pnpm --filter @genlexis/core build",
+		"build": "pnpm core:build && vite build",
 		"build:prod": "doppler run -p genlexis -c prod -- pnpm build",
 		"build:stg": "doppler run -p genlexis -c stg -- pnpm build",
 		"deploy": "wrangler deploy",
@@ -22,7 +23,7 @@
 		"test:unit": "doppler run -p genlexis -c test -- vitest",
 		"test:coverage": "doppler run -p genlexis -c test -- vitest --run --coverage",
 		"test": "doppler run -p genlexis -c test -- pnpm test:run",
-		"test:run": "vitest --run && playwright test",
+		"test:run": "pnpm core:build && vitest --run && playwright test",
 		"test:e2e": "doppler run -p genlexis -c test -- playwright test",
 		"e2e": "pnpm test:e2e",
 		"quality:fallow": "fallow audit --dead-code-baseline .fallow/dead-code.json --health-baseline .fallow/health.json --dupes-baseline .fallow/dupes.json",

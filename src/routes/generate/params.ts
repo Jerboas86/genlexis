@@ -13,6 +13,10 @@
  * decides what an invalid field becomes on the wire.
  */
 
+// The value comes from the engine itself, not from `$lib/server/genlexis`: that
+// barrel re-exports the repository, whose module graph opens the database on
+// import, and a type-only import was the only reason this file never did.
+import { SUPPORTED_PATTERNS } from '@genlexis/core';
 import type {
 	DetType,
 	Gender,
@@ -29,17 +33,13 @@ export const MAX_ITEMS_PER_LIST = 50;
 export const MAX_NOUN_LENGTH = 20;
 export const MAX_SEED_LENGTH = 128;
 
-export const SUPPORTED_PATTERNS: readonly SupportedPattern[] = [
-	'det_noun',
-	'noun',
-	'det_noun_adj',
-	'np_verb'
-];
+// The one list of patterns lives in the engine; this module only validates against it.
+export { SUPPORTED_PATTERNS };
 export const DET_TYPES: readonly DetType[] = ['definite', 'indefinite'];
-export const GENDERS: readonly Gender[] = ['m', 'f'];
-export const GRAMM_NUMBERS: readonly GrammNumber[] = ['s', 'p'];
-export const LENGTH_UNITS: readonly LengthUnit[] = ['syllables', 'phonemes'];
-export const LEXICAL_DENSITIES: readonly LexicalDensity[] = ['high', 'medium', 'low'];
+const GENDERS: readonly Gender[] = ['m', 'f'];
+const GRAMM_NUMBERS: readonly GrammNumber[] = ['s', 'p'];
+const LENGTH_UNITS: readonly LengthUnit[] = ['syllables', 'phonemes'];
+const LEXICAL_DENSITIES: readonly LexicalDensity[] = ['high', 'medium', 'low'];
 
 /** Whether a pattern has a determiner slot at all. */
 export const patternHasDet = (pattern: SupportedPattern): boolean =>

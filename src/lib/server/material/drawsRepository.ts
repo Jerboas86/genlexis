@@ -20,7 +20,7 @@ import { itemIdentityKey } from './fingerprint';
  * retries, its rotation window, and the transfer window during which a draw must
  * still resolve. Ninety days is the published figure in `limits.json`.
  */
-export const IDEMPOTENCY_RETENTION_DAYS = 90;
+const IDEMPOTENCY_RETENTION_DAYS = 90;
 
 type Database = typeof db;
 
@@ -152,6 +152,11 @@ export function createDrawRepository(database: Database = db): DrawRepository {
  * transfer window, and it is the *replay* that expires, not the record of what
  * was served.
  */
+// Nothing calls this yet. It is the scheduled half of the ledger — the entries
+// lapse after ninety days, and something has to drop them — and the schedule
+// that would call it is the metrics-and-alerts work of lot 3, step 9. Kept
+// exported so that work has a function to wire rather than one to write.
+// fallow-ignore-next-line unused-exports
 export async function purgeExpiredIdempotency(database: Database = db): Promise<number> {
 	const deleted = await database
 		.delete(materialIdempotency)

@@ -156,7 +156,7 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 // lapse after ninety days, and something has to drop them — and the schedule
 // that would call it is the metrics-and-alerts work of lot 3, step 9. Kept
 // exported so that work has a function to wire rather than one to write.
-// fallow-ignore-next-line unused-exports
+// fallow-ignore-next-line unused-export
 export async function purgeExpiredIdempotency(database: Database = db): Promise<number> {
 	const deleted = await database
 		.delete(materialIdempotency)

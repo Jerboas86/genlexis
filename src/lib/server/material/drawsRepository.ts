@@ -7,7 +7,7 @@
  * cannot resolve an exclusion is a rotation that silently does nothing.
  */
 
-import { eq, inArray, lt } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { materialDrawItems, materialDraws, materialIdempotency } from '$lib/server/db/schema';
 import type { Draw, DrawRepository, StoredDraw } from './draws';
@@ -143,24 +143,4 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 			]);
 		}
 	};
-}
-
-/**
- * Drops lapsed ledger entries.
- *
- * The draws themselves stay: a `drawId` must keep resolving for the whole
- * transfer window, and it is the *replay* that expires, not the record of what
- * was served.
- */
-// Nothing calls this yet. It is the scheduled half of the ledger — the entries
-// lapse after ninety days, and something has to drop them — and the schedule
-// that would call it is the metrics-and-alerts work of lot 3, step 9. Kept
-// exported so that work has a function to wire rather than one to write.
-// fallow-ignore-next-line unused-export
-export async function purgeExpiredIdempotency(database: Database = db): Promise<number> {
-	const deleted = await database
-		.delete(materialIdempotency)
-		.where(lt(materialIdempotency.expiresAt, new Date()))
-		.returning({ key: materialIdempotency.idempotencyKey });
-	return deleted.length;
 }

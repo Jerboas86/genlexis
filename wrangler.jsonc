@@ -3,7 +3,8 @@
 	"name": "genlexis",
 	"compatibility_date": "2026-04-28",
 	"compatibility_flags": ["nodejs_compat", "nodejs_als"],
-	"main": ".svelte-kit/cloudflare/_worker.js",
+	// Wraps the adapter's `_worker.js` so the Worker can also answer a cron.
+	"main": "worker.ts",
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
@@ -21,6 +22,13 @@
 	"vars": {
 		"ORIGIN": "https://genlexis.com"
 	},
+	// Workers Logs. The draw route writes one structured line per outcome —
+	// served, refused with its code, unauthorized, failed — and these lines are
+	// the service's metrics until it has better ones. Without this they exist
+	// only for whoever is running `wrangler tail` at the time.
+	"observability": { "enabled": true },
+	// Daily, at a quiet hour: the idempotency ledger's lapsed entries.
+	"triggers": { "crons": ["23 3 * * *"] },
 	// Drives the generated env types and warns in local dev when one is missing.
 	// It does not gate a deploy, so a name may be listed before it is provisioned.
 	"secrets": {

@@ -46,8 +46,22 @@ const STATUS: Record<DrawErrorCode, number> = {
 	service_unavailable: 503
 };
 
-const fail = (code: DrawErrorCode) =>
-	json({ error: code }, { status: STATUS[code], headers: NO_STORE });
+/**
+ * One structured line per outcome, and nothing that identifies a caller.
+ *
+ * These lines are the service's metrics until it has better ones: a rising
+ * count of `pool_exhausted` or `balance_tolerance_exceeded` is the corpus
+ * ceasing to suffice, and `unauthorized` in a burst is a rotation gone wrong on
+ * one side. The idempotency key and the exclusions never appear here — they are
+ * a linguistic reference to what a person recently heard, and exactly what must
+ * not reach an access log.
+ */
+const record = (line: Record<string, unknown>) => console.log(JSON.stringify(line));
+
+const fail = (code: DrawErrorCode, protocolRevision?: string) => {
+	record({ event: 'draw_refused', code, protocolRevision });
+	return json({ error: code }, { status: STATUS[code], headers: NO_STORE });
+};
 
 interface ParsedRequest {
 	contractVersion: string;
@@ -102,7 +116,10 @@ export const POST: RequestHandler = async ({ request, url }) => {
 	);
 	// Every failure is the same answer: telling an unauthenticated caller which
 	// check failed is telling them how to get closer.
-	if (!auth.ok) return json({ error: 'unauthorized' }, { status: 401, headers: NO_STORE });
+	if (!auth.ok) {
+		record({ event: 'draw_unauthorized' });
+		return json({ error: 'unauthorized' }, { status: 401, headers: NO_STORE });
+	}
 
 	let parsed: ParsedRequest | null;
 	try {
@@ -112,21 +129,49 @@ export const POST: RequestHandler = async ({ request, url }) => {
 	}
 	if (parsed === null) return fail('invalid_request');
 
+	return serve(parsed);
+};
+
+/**
+ * Draws, and turns every way that can go wrong into the closed answer.
+ *
+ * Kept apart from the handler so that the request's gates — size, signature,
+ * shape — read as a list, and the mapping of failures to codes as another.
+ */
+async function serve(parsed: ParsedRequest): Promise<Response> {
 	try {
 		const draw = await createDraw(parsed, {
 			repository: createDrawRepository(),
 			generationRepository
 		});
+		record({
+			event: 'draw_served',
+			protocolRevision: draw.protocolRevision,
+			poolRevision: draw.materialRelease.poolRevision,
+			items: draw.items.length,
+			phonemeBalanceDistance: draw.generation.phonemeBalanceDistance,
+			excluded: parsed.excludedDrawIds.length
+		});
 		return json(draw, { headers: NO_STORE });
 	} catch (cause) {
-		if (cause instanceof DrawError) return fail(cause.code);
-		// The engine reports a missing distribution by message; it is a request
-		// this service cannot satisfy rather than a fault in it.
-		if (cause instanceof Error && cause.message.startsWith('No phoneme distribution'))
-			return fail('corpus_unavailable');
-		// Deliberately not logged with the request: the key and the exclusions are
-		// exactly what must not reach an access log.
-		console.error('draw failed', cause instanceof Error ? cause.message : 'unknown');
-		return fail('service_unavailable');
+		return refuse(cause, parsed.protocolRevision);
 	}
-};
+}
+
+/** The closed code for a failure, logged with its name and message only. */
+function refuse(cause: unknown, protocolRevision: string): Response {
+	if (cause instanceof DrawError) return fail(cause.code, protocolRevision);
+	// The engine reports a missing distribution by message; it is a request
+	// this service cannot satisfy rather than a fault in it.
+	if (cause instanceof Error && cause.message.startsWith('No phoneme distribution'))
+		return fail('corpus_unavailable', protocolRevision);
+	console.error(
+		JSON.stringify({
+			event: 'draw_failed',
+			protocolRevision,
+			name: cause instanceof Error ? cause.name : undefined,
+			message: cause instanceof Error ? cause.message : 'unknown'
+		})
+	);
+	return fail('service_unavailable', protocolRevision);
+}

@@ -1,0 +1,15 @@
+{
+	// What the SvelteKit adapter reads — and only it. The adapter writes its
+	// generated Worker to this `main`; the real `wrangler.jsonc` names
+	// `worker.ts`, which wraps that output to add the scheduled handler. Pointing
+	// the adapter at the real config makes it overwrite `worker.ts` on every build.
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "genlexis-svelte-build",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"compatibility_date": "2026-04-28",
+	"compatibility_flags": ["nodejs_compat", "nodejs_als"],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	}
+}

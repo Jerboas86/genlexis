@@ -10,7 +10,10 @@ const config = {
 		}
 	},
 	kit: {
-		adapter: adapter(),
+		// The adapter writes the request handler to its own entrypoint, named in
+		// `wrangler.svelte.jsonc`. The deployed Worker (`worker.ts`) wraps it to add
+		// the scheduled handler; given the real config, the adapter would overwrite it.
+		adapter: adapter({ config: 'wrangler.svelte.jsonc' }),
 		experimental: {
 			remoteFunctions: true
 		},

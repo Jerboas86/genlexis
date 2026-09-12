@@ -35,5 +35,38 @@
 		]
 	},
 	"workers_dev": true,
-	"preview_urls": true
+	"preview_urls": true,
+
+	// The non-production environment, deployed as the Worker `genlexis-stg` and
+	// served on workers.dev. It exists to prove the material contract against a
+	// real endpoint before anything is served to a patient — the compatibility
+	// gate of lot 8 — not to receive public traffic.
+	//
+	// Its Doppler config points at the shared dev/stg/test database branch, which
+	// is where the finished corpus lives.
+	"env": {
+		"stg": {
+			// `routes` is an inheritable key, so leaving it out would NOT mean "no
+			// routes": this Worker would inherit the two custom domains above and
+			// take genlexis.com away from production. The empty list is what stops
+			// that, and it is allowed because `workers_dev` is true.
+			"routes": [],
+			// `vars` is not inherited. Without this, ORIGIN is undefined here, and
+			// better-auth builds its cookies from it.
+			//
+			// The value is known only after the first deploy prints the workers.dev
+			// hostname, so the sequence is: deploy once, read the URL, fill this in,
+			// deploy again.
+			"vars": { "ORIGIN": "https://genlexis-stg.REMPLIR.workers.dev" },
+			// Not inherited either. Repeated so a missing secret still warns here.
+			"secrets": {
+				"required": [
+					"PRIVATE_DATABASE_URL",
+					"BETTER_AUTH_SECRET",
+					"PRIVATE_MATERIAL_API_TOKEN",
+					"PRIVATE_MATERIAL_SIGNING_SECRET"
+				]
+			}
+		}
+	}
 }

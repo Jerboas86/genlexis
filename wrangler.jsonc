@@ -37,23 +37,31 @@
 	"workers_dev": true,
 	"preview_urls": true,
 
-	// The non-production environment, deployed as the Worker `genlexis-stg` and
-	// served on workers.dev. It exists to prove the material contract against a
-	// real endpoint before anything is served to a patient — the compatibility
-	// gate of lot 8 — not to receive public traffic.
+	// The non-production environment, deployed as the Worker `genlexis-stg`. It
+	// exists to prove the material contract against a real endpoint before
+	// anything is served to a patient — the compatibility gate of lot 8 — not to
+	// receive public traffic.
 	//
 	// Its Doppler config points at the shared dev/stg/test database branch, which
 	// is where the finished corpus lives.
 	"env": {
 		"stg": {
 			// `routes` is an inheritable key, so leaving it out would NOT mean "no
-			// routes": this Worker would inherit the two custom domains above and
-			// take genlexis.com away from production. The empty list is what stops
-			// that, and it is allowed because `workers_dev` is true.
-			"routes": [],
+			// routes": this Worker would inherit the two production domains above.
+			// Overriding it is what stops that.
+			//
+			// It is a custom domain on genlexis.com rather than the workers.dev
+			// hostname it first had, because the consumer calling it is itself a
+			// Worker. Cloudflare refuses a global fetch() from one Worker to another
+			// on the same zone, and workers.dev is one zone: the staging consumer's
+			// requests never reached this Worker and were answered 404 by the edge.
+			// A domain on this zone makes the staging pair cross-zone — which is
+			// exactly what production is, helixum.app calling genlexis.com — so the
+			// smoke proves the same topology it will run in.
+			"routes": [{ "pattern": "stg.genlexis.com", "custom_domain": true }],
 			// `vars` is not inherited. Without this, ORIGIN is undefined here, and
 			// better-auth builds its cookies from it.
-			"vars": { "ORIGIN": "https://genlexis-stg.benoitdelemps.workers.dev" },
+			"vars": { "ORIGIN": "https://stg.genlexis.com" },
 			// Not inherited either. Repeated so a missing secret still warns here.
 			"secrets": {
 				"required": [

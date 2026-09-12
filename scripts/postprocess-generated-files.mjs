@@ -6,8 +6,13 @@ const root = process.cwd();
 const workerTypesPath = path.join(root, 'worker-configuration.d.ts');
 const paraglideDirs = [path.join(root, 'src/lib/paraglide'), path.join(root, 'src/paraglide')];
 
-const workerImportPattern =
-	/mainModule:\s*typeof import\((['"])\.\/\.svelte-kit\/cloudflare\/_worker\1\);/;
+// Whatever `main` names — the adapter's `_worker.js`, or `worker.ts` which
+// imports it — `typeof import(...)` makes svelte-check follow it into the built
+// server output, thousands of generated lines that were never meant to pass
+// strict checks. The binding type is not worth that; it becomes `unknown`.
+// Anchored to a declaration line: the same text appears in a comment further
+// down the generated file, and that one is documentation, not a type.
+const workerImportPattern = /^(\s*)mainModule:\s*typeof import\((['"])[^'"]+\2\);/m;
 
 async function maybeRewriteWorkerTypes() {
 	let source;
@@ -18,7 +23,7 @@ async function maybeRewriteWorkerTypes() {
 		return;
 	}
 
-	const updated = source.replace(workerImportPattern, 'mainModule: unknown;');
+	const updated = source.replace(workerImportPattern, '$1mainModule: unknown;');
 
 	if (updated !== source) {
 		await writeFile(workerTypesPath, updated);

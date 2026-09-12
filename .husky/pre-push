@@ -1,3 +1,4 @@
+pnpm quality:fallow
 pnpm build
 pnpm lint
 pnpm check

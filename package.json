@@ -10,7 +10,9 @@
 	},
 	"scripts": {
 		"dev": "doppler run -p genlexis -c dev -- vite dev",
-		"build": "doppler run -p genlexis -c prod -- vite build",
+		"build": "vite build",
+		"build:prod": "doppler run -p genlexis -c prod -- pnpm build",
+		"build:stg": "doppler run -p genlexis -c stg -- pnpm build",
 		"deploy": "wrangler deploy",
 		"preview": "vite preview",
 		"prepare": "playwright install && pnpm gen && svelte-kit sync || echo '' && husky",

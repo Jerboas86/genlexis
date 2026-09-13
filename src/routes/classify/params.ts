@@ -78,14 +78,10 @@ export interface ClassificationParams {
 }
 
 export type ClassifyRefusal =
-	| 'invalid_sentence_id'
-	| 'missing_appropriate'
-	| 'missing_grammatical'
-	| 'missing_semantics';
+	'invalid_sentence_id' | 'missing_appropriate' | 'missing_grammatical' | 'missing_semantics';
 
 export type ClassifyResult =
-	| { ok: true; value: ClassificationParams }
-	| { ok: false; reason: ClassifyRefusal };
+	{ ok: true; value: ClassificationParams } | { ok: false; reason: ClassifyRefusal };
 
 /**
  * Reads a full classification, enforcing the order the questions are put in.

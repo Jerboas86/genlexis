@@ -34,7 +34,6 @@
 	"secrets": {
 		"required": [
 			"PRIVATE_DATABASE_URL",
-			"BETTER_AUTH_SECRET",
 			// The server-to-server credentials of the material contract. The two
 			// `_PREVIOUS` names are absent on purpose: they exist only during a
 			// rotation, and listing them would warn on every ordinary run.
@@ -74,7 +73,6 @@
 			"secrets": {
 				"required": [
 					"PRIVATE_DATABASE_URL",
-					"BETTER_AUTH_SECRET",
 					"PRIVATE_MATERIAL_API_TOKEN",
 					"PRIVATE_MATERIAL_SIGNING_SECRET"
 				]

@@ -395,8 +395,10 @@ export const materialIdempotency = genlexis.table(
  * Helixum, and `drizzle-kit push` proposes to drop what a declared schema does
  * not contain. Helixum owns those tables; this repository must never claim them.
  *
- * Nothing needs it at runtime: `drizzleAdapter(db, { provider: 'pg' })` is given
- * no schema and uses better-auth's own mapping.
+ * Nothing needs it at runtime: better-auth itself is gone from this repository.
+ * Nothing ever read `locals.user`, no route signed anyone in, and its default
+ * mapping pointed at a `public.user` that does not exist — it had never done
+ * anything but return `null`, until 1.7 made it refuse to start on that.
  *
  * See `specs/shared-database-ownership.md` in the Helixum repository.
  */

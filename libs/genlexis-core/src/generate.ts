@@ -1,5 +1,6 @@
 import { selectBalancedLists } from './phonemes/balancer.js';
-import { addCounts, tokensToCounts } from './phonemes/distribution.js';
+import { l1Distance } from './phonemes/distance.js';
+import { addCounts, countsToProbabilities, tokensToCounts } from './phonemes/distribution.js';
 import { createIpaTokenizer } from './phonemes/tokenizer.js';
 import type { PhonemeCounts, PooledWord } from './phonemes/types.js';
 import type {
@@ -99,10 +100,54 @@ export const generateAcceptedSentences = async (
 	};
 };
 
-export const generateBalancedAcceptedSentences = async (
-	options: GenerateBalancedOptions,
-	repository: GenerationRepository
-): Promise<BalancedGenerateResult> => {
+/**
+ * How many accepted items the repository is asked for.
+ *
+ * An explicit multiplier still means what it always did — a caller asking for a
+ * deliberately narrow pool gets one. The default no longer scales with the
+ * request, because the right pool is the corpus, not a multiple of 20.
+ */
+const poolSizeFor = (options: GenerateBalancedOptions, totalRequested: number): number =>
+	options.poolMultiplier === undefined
+		? Math.max(DEFAULT_POOL_SIZE, totalRequested + MIN_POOL_HEADROOM)
+		: Math.max(totalRequested * options.poolMultiplier, totalRequested + MIN_POOL_HEADROOM);
+
+/** The items still drawable: not excluded, and one per dedupe key, in the order given. */
+const drawableItems = (
+	items: readonly AcceptedItemWithIpa[],
+	excludedSentenceIds: readonly number[]
+): AcceptedItemWithIpa[] => {
+	const excluded = new Set(excludedSentenceIds);
+	const seen = new Set<string>();
+	return items.filter((item) => {
+		if (excluded.has(item.sentenceId) || seen.has(item.dedupeKey)) return false;
+		seen.add(item.dedupeKey);
+		return true;
+	});
+};
+
+/** The phoneme counts of one item, over every transcription it carries. */
+const phonemeCountsOf = (
+	item: AcceptedItemWithIpa,
+	tokenizer: ReturnType<typeof createIpaTokenizer>
+): PhonemeCounts =>
+	item.phonoIpas
+		.filter((ipa) => Boolean(ipa))
+		.reduce<PhonemeCounts>(
+			(counts, ipa) => addCounts(counts, tokensToCounts(tokenizer.tokenize(ipa).tokens)),
+			{}
+		);
+
+/**
+ * The accepted pool a selection draws from, in the seed's order.
+ *
+ * Shared by the balanced and the uniform selection, so the two differ in how
+ * they pick and in nothing else: the same filters, the same exclusions, the same
+ * deduplication, and the same rule that an item without a phonemic transcription
+ * is not drawable — the distance has to be computable for every list, whether it
+ * gates the list or only describes it.
+ */
+const loadPool = async (options: GenerateBalancedOptions, repository: GenerationRepository) => {
 	const listCount = Math.max(1, Math.min(5, Math.floor(options.listCount)));
 	const itemsPerList = Math.max(1, Math.floor(options.itemsPerList));
 	const target = await repository.getPhonemeDistribution(options.language);
@@ -110,15 +155,6 @@ export const generateBalancedAcceptedSentences = async (
 	if (Object.keys(target).length === 0) {
 		throw new Error(`No phoneme distribution found for language "${options.language}"`);
 	}
-
-	const totalRequested = listCount * itemsPerList;
-	// An explicit multiplier still means what it always did — a caller asking for
-	// a deliberately narrow pool gets one. The default no longer scales with the
-	// request, because the right pool is the corpus, not a multiple of 20.
-	const poolSize =
-		options.poolMultiplier === undefined
-			? Math.max(DEFAULT_POOL_SIZE, totalRequested + MIN_POOL_HEADROOM)
-			: Math.max(totalRequested * options.poolMultiplier, totalRequested + MIN_POOL_HEADROOM);
 
 	const items = await repository.findAcceptedItemsWithIpa({
 		language: options.language,
@@ -129,34 +165,57 @@ export const generateBalancedAcceptedSentences = async (
 		lengthUnit: options.lengthUnit,
 		length: options.length,
 		lexicalDensity: options.lexicalDensity,
-		poolSize,
+		poolSize: poolSizeFor(options, listCount * itemsPerList),
 		seed: options.seed
 	});
-
-	const excluded = new Set(options.excludedSentenceIds ?? []);
-	const seen = new Set<string>();
-	const unique: AcceptedItemWithIpa[] = [];
-	for (const item of items) {
-		if (excluded.has(item.sentenceId)) continue;
-		if (seen.has(item.dedupeKey)) continue;
-		seen.add(item.dedupeKey);
-		unique.push(item);
-	}
 
 	const tokenizer = createIpaTokenizer(Object.keys(target), options.tokenizerOptions);
 	const itemsById = new Map<number, AcceptedItemWithIpa>();
 	const pool: PooledWord[] = [];
-	for (const item of unique) {
-		let counts: PhonemeCounts = {};
-		for (const ipa of item.phonoIpas) {
-			if (!ipa) continue;
-			const { tokens } = tokenizer.tokenize(ipa);
-			counts = addCounts(counts, tokensToCounts(tokens));
-		}
+	for (const item of drawableItems(items, options.excludedSentenceIds ?? [])) {
+		const counts = phonemeCountsOf(item, tokenizer);
 		if (Object.keys(counts).length === 0) continue;
 		itemsById.set(item.sentenceId, item);
 		pool.push({ id: item.sentenceId, counts });
 	}
+
+	return { listCount, itemsPerList, target, itemsById, pool };
+};
+
+/** Turns picked pool entries back into sentences, in the order they were picked. */
+const toSentences = (
+	picked: readonly PooledWord[],
+	itemsById: ReadonlyMap<number, AcceptedItemWithIpa>
+): AcceptedSentence[] =>
+	picked.map((entry) => {
+		const item = itemsById.get(entry.id as number);
+		if (!item) throw new Error('Selection returned a word not present in the pool');
+		return stripDedupeKey(item);
+	});
+
+/** Summarises picked lists into the result both selections return. */
+const resultOf = (
+	lists: AcceptedSentence[][],
+	scores: number[],
+	listCount: number,
+	itemsPerList: number,
+	poolSize: number
+): BalancedGenerateResult => ({
+	lists,
+	requestedLists: listCount,
+	requestedItemsPerList: itemsPerList,
+	totalItems: lists.reduce((acc, list) => acc + list.length, 0),
+	scores,
+	aggregateScore:
+		scores.length === 0 ? 0 : scores.reduce((acc, score) => acc + score, 0) / scores.length,
+	poolSize
+});
+
+export const generateBalancedAcceptedSentences = async (
+	options: GenerateBalancedOptions,
+	repository: GenerationRepository
+): Promise<BalancedGenerateResult> => {
+	const { listCount, itemsPerList, target, itemsById, pool } = await loadPool(options, repository);
 
 	const balanced = selectBalancedLists(pool, target, listCount, itemsPerList, {
 		allowReuse: options.allowReuseAcrossLists ?? false,
@@ -166,28 +225,58 @@ export const generateBalancedAcceptedSentences = async (
 		seed: options.seed
 	});
 
-	const lists: AcceptedSentence[][] = balanced.map((list) =>
-		list.items.map((picked) => {
-			const item = itemsById.get(picked.id as number);
-			if (!item) throw new Error('Balancer returned a word not present in the pool');
-			return stripDedupeKey(item);
-		})
+	return resultOf(
+		balanced.map((list) => toSentences(list.items, itemsById)),
+		balanced.map((list) => list.score),
+		listCount,
+		itemsPerList,
+		pool.length
+	);
+};
+
+/**
+ * Draws lists as a simple random sample of the accepted pool, without
+ * replacement, in the seed's order.
+ *
+ * The balanced selection chases the language's phoneme distribution, so the
+ * sentences that help it come back draw after draw: its lists are not a sample of
+ * the pool, and a consumer that treats them as one — Helixum's estimation does —
+ * is wrong about its own material. Here every drawable sentence is equally likely,
+ * and the order of each list is the seed's, which is also the order a session
+ * presents it in.
+ *
+ * The phoneme-balance distance is still computed for every list and returned in
+ * `scores`, as a description of the list rather than a condition on it.
+ */
+export const generateUniformAcceptedSentences = async (
+	options: GenerateBalancedOptions,
+	repository: GenerationRepository
+): Promise<BalancedGenerateResult> => {
+	const { listCount, itemsPerList, target, itemsById, pool } = await loadPool(options, repository);
+
+	const lists: PooledWord[][] = [];
+	for (let index = 0; index < listCount; index += 1) {
+		const list = pool.slice(index * itemsPerList, (index + 1) * itemsPerList);
+		if (list.length === 0) break;
+		lists.push(list);
+	}
+
+	const scores = lists.map((list) =>
+		l1Distance(
+			target,
+			countsToProbabilities(
+				list.reduce<PhonemeCounts>((acc, entry) => addCounts(acc, entry.counts), {})
+			)
+		)
 	);
 
-	const scores = balanced.map((list) => list.score);
-	const totalItems = lists.reduce((acc, list) => acc + list.length, 0);
-	const aggregateScore =
-		scores.length === 0 ? 0 : scores.reduce((acc, score) => acc + score, 0) / scores.length;
-
-	return {
-		lists,
-		requestedLists: listCount,
-		requestedItemsPerList: itemsPerList,
-		totalItems,
+	return resultOf(
+		lists.map((list) => toSentences(list, itemsById)),
 		scores,
-		aggregateScore,
-		poolSize: pool.length
-	};
+		listCount,
+		itemsPerList,
+		pool.length
+	);
 };
 
 export const getAcceptedSentenceCount = (repository: GenerationRepository): Promise<number> =>

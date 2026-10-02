@@ -256,12 +256,25 @@ components:
     DrawGeneration:
       type: object
       additionalProperties: false
-      required: [seed, options, phonemeBalanceDistance, phonemeBalanceTolerance]
+      required:
+        [seed, options, selection, phonemeBalanceDistance, phonemeBalanceTolerance]
+      description: >
+        How the list was selected. `balanced` lists are chosen to approach the
+        language's phoneme distribution and are refused above the revision's
+        tolerance. `uniform` lists are a simple random sample without
+        replacement, in the seed's order: the phoneme-balance distance is still
+        computed and reported, as a diagnostic, and no tolerance applies — so
+        `phonemeBalanceTolerance` is `null` if and only if `selection` is
+        `uniform`.
       properties:
         seed: { type: string, minLength: 1, maxLength: 128 }
         options: { $ref: "#/components/schemas/GenerationOptions" }
+        selection: { type: string, enum: [balanced, uniform] }
         phonemeBalanceDistance: { type: number, minimum: 0 }
-        phonemeBalanceTolerance: { type: number, minimum: 0 }
+        phonemeBalanceTolerance:
+          oneOf:
+            - { type: number, minimum: 0 }
+            - { type: "null" }
 
     Draw:
       type: object

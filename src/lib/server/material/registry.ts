@@ -45,19 +45,31 @@ export interface ProtocolConfiguration {
 	pattern: SupportedPattern;
 	lexicalDensity: LexicalDensity;
 	itemsPerList: number;
+	/**
+	 * How a list is picked from the pool.
+	 *
+	 * `balanced` chases the language's phoneme distribution and is held to
+	 * `phonemeBalanceTolerance`. `uniform` is a simple random sample in the seed's
+	 * order: the sentences that help a balance no longer come back draw after
+	 * draw, which is what a consumer treating each draw as a sample of the pool
+	 * assumes.
+	 */
+	selection: 'balanced' | 'uniform';
 	detType?: DetType;
 	gender?: Gender;
 	grammNumber?: GrammNumber;
 	lengthUnit?: LengthUnit;
 	length?: number;
 	/**
-	 * The largest phoneme-balance distance a draw may have and still be served.
+	 * The largest phoneme-balance distance a draw may have and still be served,
+	 * or `null` for a uniform selection, which no tolerance applies to.
 	 *
-	 * A draw above it is refused with `balance_tolerance_exceeded` rather than
-	 * returned with a warning: a list that is not phonemically matched is not the
-	 * instrument this revision names.
+	 * A balanced draw above it is refused with `balance_tolerance_exceeded` rather
+	 * than returned with a warning: a list that is not phonemically matched is not
+	 * the instrument a balanced revision names. A uniform draw still reports its
+	 * distance, as a description of the list.
 	 */
-	phonemeBalanceTolerance: number;
+	phonemeBalanceTolerance: number | null;
 	/**
 	 * How many draws to attempt before giving up on the exclusions.
 	 *
@@ -88,6 +100,7 @@ const REVISIONS: Readonly<Record<string, ProtocolConfiguration>> = {
 		pattern: 'np_verb',
 		lexicalDensity: 'medium',
 		itemsPerList: 20,
+		selection: 'balanced',
 		// Measured against the finished corpus, and measured at the case that binds.
 		//
 		// The tempting reference is a fresh draw, and it is the wrong one: the service
@@ -108,16 +121,43 @@ const REVISIONS: Readonly<Record<string, ProtocolConfiguration>> = {
 		// corpus pushes these distances back up. A tolerance that refused 2% of draws
 		// today would refuse more later, and this value cannot be revisited.
 		//
-		// It cannot be revisited because it is hashed into the protocol's identity on
-		// the consumer's side, and two sessions are comparable only when those hashes
-		// match. Changing it would sever every patient's baseline from their own
-		// follow-ups. The earlier values — 0.08, then 0.16 — could be corrected in
-		// place only because nothing had ever consumed them.
+		// It cannot be revisited in place: a revision is frozen once published, and a
+		// different tolerance is a different revision. (An earlier version of this
+		// comment said the value was hashed into the consumer's protocol identity. It
+		// never was — Helixum hashed `null` — which is why Helixum's protocol now names
+		// the revision itself.) The earlier values — 0.08, then 0.16 — could be
+		// corrected in place only because nothing had ever consumed them.
 		//
 		// §16 (9) of `listening-conditions.md` still owns the clinical figure; this is
 		// what the material delivers, not what the instrument should ultimately
 		// require.
 		phonemeBalanceTolerance: 0.13,
+		maxDrawAttempts: 8
+	},
+	/*
+		The revision Helixum draws under from October 2026
+		(`specs/genlexis-uniform-draw.md` in the Helixum repository).
+
+		Uniform rather than balanced: phoneme balance is not what makes two lists of
+		sentences equally difficult — matrix tests equalise intelligibility, by
+		measured level adjustment — and the balancer's preference for the same
+		helpful sentences made each draw something other than a sample of the pool.
+
+		Forty items: a Helixum session presents 3 warm-up items and 30 measured ones,
+		never one twice, and a listener may ask to repeat the warm-up; forty covers
+		two repeats. With Helixum's rotation of ten draws, 400 of the 1924 sentences
+		are excluded at most, so a draw cannot run out of material.
+	*/
+	'genlexis-fr-np-verb-r2': {
+		materialSourceId: 'genlexis-fr',
+		materialRelease: 'r1',
+		poolRevision: 'pool-2026-09-11',
+		language: 'fr-FR',
+		pattern: 'np_verb',
+		lexicalDensity: 'medium',
+		itemsPerList: 40,
+		selection: 'uniform',
+		phonemeBalanceTolerance: null,
 		maxDrawAttempts: 8
 	}
 };

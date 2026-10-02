@@ -19,7 +19,11 @@
  *   window to make a draw fit would weaken a guarantee that is theirs to set.
  */
 
-import { generateBalancedAcceptedSentences, type AcceptedSentence } from '@genlexis/core';
+import {
+	generateBalancedAcceptedSentences,
+	generateUniformAcceptedSentences,
+	type AcceptedSentence
+} from '@genlexis/core';
 import {
 	canonicaliseExclusions,
 	createDrawId,
@@ -69,8 +73,10 @@ export interface Draw {
 	generation: {
 		seed: string;
 		options: Record<string, unknown>;
+		selection: 'balanced' | 'uniform';
 		phonemeBalanceDistance: number;
-		phonemeBalanceTolerance: number;
+		/** `null` exactly when `selection` is `uniform`. */
+		phonemeBalanceTolerance: number | null;
 	};
 	items: DrawItem[];
 	issuedAt: number;
@@ -110,7 +116,10 @@ export type BalancedGenerator = typeof generateBalancedAcceptedSentences;
 
 export interface DrawDependencies {
 	repository: DrawRepository;
+	/** The balanced selection; defaults to the engine's. */
 	generate?: BalancedGenerator;
+	/** The uniform selection; defaults to the engine's. */
+	generateUniform?: BalancedGenerator;
 	/** The `GenerationRepository` the engine draws against. */
 	generationRepository: Parameters<BalancedGenerator>[1];
 	now?: () => number;
@@ -151,6 +160,84 @@ async function toItems(sentences: readonly AcceptedSentence[]): Promise<DrawItem
 	);
 }
 
+/** The selection a revision names, from the injected engine or the real one. */
+function generatorFor(
+	configuration: ProtocolConfiguration,
+	dependencies: DrawDependencies
+): BalancedGenerator {
+	return configuration.selection === 'uniform'
+		? (dependencies.generateUniform ?? generateUniformAcceptedSentences)
+		: (dependencies.generate ?? generateBalancedAcceptedSentences);
+}
+
+/** What the engine is asked for: the revision's fixed parameters, the exclusions and a seed. */
+function engineOptions(
+	configuration: ProtocolConfiguration,
+	excludedSentenceIds: number[],
+	seed: string
+): Parameters<BalancedGenerator>[0] {
+	return {
+		language: configuration.language,
+		pattern: configuration.pattern,
+		lexicalDensity: configuration.lexicalDensity,
+		detType: configuration.detType,
+		gender: configuration.gender,
+		grammNumber: configuration.grammNumber,
+		lengthUnit: configuration.length === undefined ? undefined : configuration.lengthUnit,
+		length: configuration.length,
+		listCount: 1,
+		itemsPerList: configuration.itemsPerList,
+		excludedSentenceIds,
+		seed
+	};
+}
+
+/** How one attempt went: a servable list, or the reason it is not one. */
+type Attempt =
+	| { kind: 'short' }
+	| { kind: 'overlap' }
+	| { kind: 'unbalanced'; distance: number }
+	| { kind: 'servable'; items: DrawItem[]; distance: number };
+
+/** Judges one engine result against the revision and the exclusions. */
+async function judgeAttempt(
+	result: Awaited<ReturnType<BalancedGenerator>>,
+	configuration: ProtocolConfiguration,
+	forbidden: ReadonlySet<string>
+): Promise<Attempt> {
+	const sentences = result.lists[0] ?? [];
+	// An early attempt may simply have drawn badly; only never managing a full
+	// list means the pool cannot serve this revision.
+	if (sentences.length < configuration.itemsPerList) return { kind: 'short' };
+
+	const items = await toItems(sentences);
+	// A new drawId that reuses one recent sentence is not a rotation.
+	if (items.some((item) => forbidden.has(itemIdentityKey(item)))) return { kind: 'overlap' };
+
+	const distance = result.scores[0] ?? result.aggregateScore;
+	// A uniform revision has no tolerance: its distance describes the list.
+	const tolerance = configuration.phonemeBalanceTolerance;
+	if (tolerance !== null && distance > tolerance) return { kind: 'unbalanced', distance };
+	return { kind: 'servable', items, distance };
+}
+
+/**
+ * The refusal once every attempt failed.
+ *
+ * The three are different failures and must not collapse into one: a pool that
+ * cannot fill a list at all is not a rotation that emptied it, and neither is a
+ * list that came out phonemically unmatched. None may be repaired by narrowing
+ * the caller's rotation window or by relaxing the tolerance the revision
+ * published.
+ */
+function refusalAfter(attempts: readonly Attempt[]): DrawError {
+	if (attempts.every((attempt) => attempt.kind === 'short'))
+		return new DrawError('incomplete_draw');
+	if (attempts.some((attempt) => attempt.kind === 'unbalanced'))
+		return new DrawError('balance_tolerance_exceeded');
+	return new DrawError('pool_exhausted');
+}
+
 /**
  * Produces or replays one draw.
  *
@@ -183,52 +270,23 @@ export async function createDraw(
 
 	const forbidden = new Set(await dependencies.repository.resolveExcludedItems(excludedDrawIds));
 	// The identity keys are `itemId@itemRevision`, and the item id is the sentence
-	// id. The balancer is told the sentences so it never picks them; the identity
-	// check below stays as the backstop, because a sentence whose text changed is
-	// a different revision and only the key can tell.
+	// id. The engine is told the sentences so it never picks them; the identity
+	// check stays as the backstop, because a sentence whose text changed is a
+	// different revision and only the key can tell.
 	const excludedSentenceIds = [...forbidden].map((key) => Number(key.split('@')[0]));
-	const generate = dependencies.generate ?? generateBalancedAcceptedSentences;
-	const now = dependencies.now ?? Date.now;
+	const generate = generatorFor(configuration, dependencies);
 	const newSeed = dependencies.newSeed ?? ((attempt: number) => `${createDrawId()}-${attempt}`);
-	const options = optionsFor(configuration);
 
-	// The three refusals below are different failures and must not collapse into
-	// one: a pool that cannot fill a list at all is not a rotation that emptied
-	// it, and neither is a list that came out phonemically unmatched.
-	let anyFullLength = false;
-	let lastDistance: number | null = null;
-	for (let attempt = 0; attempt < configuration.maxDrawAttempts; attempt += 1) {
-		const seed = newSeed(attempt);
+	const attempts: Attempt[] = [];
+	for (let index = 0; index < configuration.maxDrawAttempts; index += 1) {
+		const seed = newSeed(index);
 		const result = await generate(
-			{
-				language: configuration.language,
-				pattern: configuration.pattern,
-				lexicalDensity: configuration.lexicalDensity,
-				detType: configuration.detType,
-				gender: configuration.gender,
-				grammNumber: configuration.grammNumber,
-				lengthUnit: configuration.length === undefined ? undefined : configuration.lengthUnit,
-				length: configuration.length,
-				listCount: 1,
-				itemsPerList: configuration.itemsPerList,
-				excludedSentenceIds,
-				seed
-			},
+			engineOptions(configuration, excludedSentenceIds, seed),
 			dependencies.generationRepository
 		);
-
-		const sentences = result.lists[0] ?? [];
-		// An early attempt may simply have drawn badly; only never managing a full
-		// list means the pool cannot serve this revision.
-		if (sentences.length < configuration.itemsPerList) continue;
-		anyFullLength = true;
-
-		const items = await toItems(sentences);
-		// A new drawId that reuses one recent sentence is not a rotation.
-		if (items.some((item) => forbidden.has(itemIdentityKey(item)))) continue;
-
-		lastDistance = result.scores[0] ?? result.aggregateScore;
-		if (lastDistance > configuration.phonemeBalanceTolerance) continue;
+		const attempt = await judgeAttempt(result, configuration, forbidden);
+		attempts.push(attempt);
+		if (attempt.kind !== 'servable') continue;
 
 		const draw: Draw = {
 			contractVersion: CONTRACT_VERSION,
@@ -242,12 +300,13 @@ export async function createDraw(
 			language: configuration.language,
 			generation: {
 				seed,
-				options,
-				phonemeBalanceDistance: lastDistance,
+				options: optionsFor(configuration),
+				selection: configuration.selection,
+				phonemeBalanceDistance: attempt.distance,
 				phonemeBalanceTolerance: configuration.phonemeBalanceTolerance
 			},
-			items,
-			issuedAt: now()
+			items: attempt.items,
+			issuedAt: (dependencies.now ?? Date.now)()
 		};
 
 		// Persisted before it is returned. A draw the caller holds and the service
@@ -257,11 +316,5 @@ export async function createDraw(
 		return draw;
 	}
 
-	// Each of these is an honest refusal, and none may be repaired by narrowing
-	// the caller's rotation window or by relaxing the tolerance the revision
-	// published.
-	if (!anyFullLength) throw new DrawError('incomplete_draw');
-	if (lastDistance !== null && lastDistance > configuration.phonemeBalanceTolerance)
-		throw new DrawError('balance_tolerance_exceeded');
-	throw new DrawError('pool_exhausted');
+	throw refusalAfter(attempts);
 }

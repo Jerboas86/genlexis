@@ -35,6 +35,7 @@
           "itemsPerList": 1,
           "listCount": 1
         },
+        "selection": "balanced",
         "phonemeBalanceDistance": 0.0829,
         "phonemeBalanceTolerance": 0.13
       },

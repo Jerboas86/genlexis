@@ -299,15 +299,23 @@ export const materialDraws = genlexis.table(
 		seed: text('seed').notNull(),
 		/** The generation options, as the response reported them. */
 		options: text('options').notNull(),
+		/**
+		 * How the list was picked: `balanced` or `uniform`.
+		 *
+		 * Draws stored before uniform selection existed were all balanced, which is
+		 * what the column's default records for them.
+		 */
+		selection: text('selection').notNull().default('balanced'),
 		phonemeBalanceDistance: numeric('phoneme_balance_distance').notNull(),
 		/**
-		 * The tolerance this draw was judged against.
+		 * The tolerance this draw was judged against, or `null` for a uniform draw,
+		 * which was judged against none.
 		 *
 		 * Stored rather than read back from the registry, so a replay reports the
 		 * threshold that actually applied — a revision republished with another
 		 * one must not retroactively change what a served draw claims to have met.
 		 */
-		phonemeBalanceTolerance: numeric('phoneme_balance_tolerance').notNull(),
+		phonemeBalanceTolerance: numeric('phoneme_balance_tolerance'),
 		issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow()
 	},
 	(t) => [index('material_draws_protocol_idx').on(t.protocolRevision, t.issuedAt)]

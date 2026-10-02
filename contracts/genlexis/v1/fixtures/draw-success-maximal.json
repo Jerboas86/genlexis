@@ -105,6 +105,7 @@
           "lengthUnit": "syllables",
           "length": 6
         },
+        "selection": "balanced",
         "phonemeBalanceDistance": 0.1299,
         "phonemeBalanceTolerance": 0.13
       },

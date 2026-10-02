@@ -42,11 +42,14 @@ function toDraw(
 		generation: {
 			seed: row.seed,
 			options: JSON.parse(row.options) as Record<string, unknown>,
+			selection: row.selection === 'uniform' ? 'uniform' : 'balanced',
 			phonemeBalanceDistance: Number(row.phonemeBalanceDistance),
 			// Read from the row rather than from the registry: replaying a draw must
 			// report the tolerance it was actually judged against, even if the
-			// revision were ever republished with another one.
-			phonemeBalanceTolerance: Number(row.phonemeBalanceTolerance ?? 0)
+			// revision were ever republished with another one. A uniform draw was
+			// judged against none.
+			phonemeBalanceTolerance:
+				row.phonemeBalanceTolerance === null ? null : Number(row.phonemeBalanceTolerance)
 		},
 		items: items
 			.sort((left, right) => left.position - right.position)
@@ -123,8 +126,12 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 					language: draw.language,
 					seed: draw.generation.seed,
 					options: JSON.stringify(draw.generation.options),
+					selection: draw.generation.selection,
 					phonemeBalanceDistance: String(draw.generation.phonemeBalanceDistance),
-					phonemeBalanceTolerance: String(draw.generation.phonemeBalanceTolerance),
+					phonemeBalanceTolerance:
+						draw.generation.phonemeBalanceTolerance === null
+							? null
+							: String(draw.generation.phonemeBalanceTolerance),
 					issuedAt: new Date(draw.issuedAt)
 				}),
 				database.insert(materialDrawItems).values(

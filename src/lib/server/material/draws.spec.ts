@@ -355,3 +355,52 @@ describe('item identity', () => {
 		expect(second.items[0]!.itemRevision).toMatch(/^[0-9a-f]{16}$/);
 	});
 });
+
+describe('the uniform revision', () => {
+	const UNIFORM = 'genlexis-fr-np-verb-r2';
+
+	it('is published, uniform, forty items long, and held to no tolerance', () => {
+		const configuration = resolveProtocolRevision(UNIFORM)!;
+		expect(configuration.selection).toBe('uniform');
+		expect(configuration.itemsPerList).toBe(40);
+		expect(configuration.phonemeBalanceTolerance).toBeNull();
+	});
+
+	it('draws with the uniform selection, never the balancer', async () => {
+		const balanced = poolGenerator(500);
+		const uniform = poolGenerator(500);
+		const draw = await createDraw(
+			request({ protocolRevision: UNIFORM }),
+			dependencies({ generate: balanced, generateUniform: uniform })
+		);
+
+		expect(uniform).toHaveBeenCalledOnce();
+		expect(balanced).not.toHaveBeenCalled();
+		expect(draw.items).toHaveLength(40);
+		expect(draw.generation.selection).toBe('uniform');
+		expect(draw.generation.phonemeBalanceTolerance).toBeNull();
+	});
+
+	it('reports the distance however far it is, rather than refusing the list', async () => {
+		// A distance no balanced revision would serve: here it only describes.
+		const draw = await createDraw(
+			request({ protocolRevision: UNIFORM }),
+			dependencies({ generateUniform: poolGenerator(500, 0.9) })
+		);
+		expect(draw.generation.phonemeBalanceDistance).toBe(0.9);
+	});
+
+	it('leaves the balanced revision balanced', async () => {
+		const balanced = poolGenerator(500);
+		const uniform = poolGenerator(500);
+		const draw = await createDraw(
+			request(),
+			dependencies({ generate: balanced, generateUniform: uniform })
+		);
+
+		expect(balanced).toHaveBeenCalled();
+		expect(uniform).not.toHaveBeenCalled();
+		expect(draw.generation.selection).toBe('balanced');
+		expect(draw.generation.phonemeBalanceTolerance).toBe(0.13);
+	});
+});

@@ -79,6 +79,44 @@ paths:
         "429": { $ref: "#/components/responses/TooManyRequests" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/pools/{protocolRevision}:
+    get:
+      operationId: getPool
+      summary: Describe the whole pool a protocol revision draws from.
+      description: |
+        Every sentence a draw under this revision can serve — every variant of
+        every pair, not one per pair — each token with the lexical entry it was
+        built from. For a consumer that studies its material: models difficulty
+        from the words, simulates sessions on the real universe, checks that its
+        draws are samples of it. It is never a substitute for a draw and records
+        no session.
+
+        The pool is named by a protocol revision, as a draw is, and lists exactly
+        what a draw under it may serve: the same filters, and the same rule that
+        a sentence whose transcriptions yield no phoneme is not drawable. An item
+        carries the identity a draw gives it, so the same sentence is
+        recognisably one in both.
+
+        The request has no body: it is signed like a draw, over an empty last
+        field.
+      parameters:
+        - name: protocolRevision
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/ProtocolRevision" }
+      responses:
+        "200":
+          description: The pool, as the corpus stands.
+          headers:
+            Cache-Control: { schema: { type: string, const: "no-store" } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Pool" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/Unprocessable" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
 components:
   securitySchemes:
     materialAuth:
@@ -97,7 +135,7 @@ components:
         METHOD      upper case, e.g. POST
         PATH        no query string, no host, e.g. /v1/draws
         TIMESTAMP   seconds since the epoch, as decimal text
-        BODY        verbatim, exactly as transmitted
+        BODY        verbatim, exactly as transmitted; empty for a GET
         ```
 
         The body is signed **as sent**. Re-serialising it before signing, or
@@ -294,6 +332,145 @@ components:
           minItems: 1
           maxItems: 128
           items: { $ref: "#/components/schemas/DrawItem" }
+        issuedAt:
+          type: integer
+          description: Epoch milliseconds.
+          minimum: 0
+
+    PoolFilters:
+      type: object
+      additionalProperties: false
+      required: [pattern, lexicalDensity]
+      description: The filters the revision fixes; an absent one was not applied.
+      properties:
+        pattern:
+          type: string
+          enum: [noun, det_noun, det_noun_adj, np_verb]
+        lexicalDensity:
+          type: string
+          enum: [high, medium, low]
+        detType: { type: string, enum: [definite, indefinite] }
+        gender: { type: string, enum: [m, f] }
+        grammNumber: { type: string, enum: [s, p] }
+        lengthUnit: { type: string, enum: [syllables, phonemes] }
+        length: { type: integer, minimum: 1, maximum: 64 }
+
+    LexicalProperties:
+      type: object
+      additionalProperties: false
+      description: |
+        One word's entry in the lexicon, named after the lexicon's own columns
+        rather than after an interpretation of them: a consumer that models
+        difficulty chooses its own reading. Every field but `source` is `null`
+        when the lexicon has no value.
+      required:
+        [source, lemma, category, gender, number, verbInfo, frequency, frequencyOrtho,
+         frequencyLemma, cdOrtho, phono, phonoIpa, letterCount, phonemeCount,
+         syllableCount, syllPhono, cvPhono, old20, pld20, voisOrtho, voisPhono,
+         homographCount, homophoneCount, puOrtho, puPhon, preval, prevalCount, rtFlp,
+         zrtFlp, errFlp]
+      properties:
+        source:
+          type: string
+          description: The lexicon the entry comes from, e.g. `lexique4`.
+          minLength: 1
+          maxLength: 64
+        lemma: { type: [string, "null"] }
+        category: { type: [string, "null"] }
+        gender: { type: [string, "null"] }
+        number: { type: [string, "null"] }
+        verbInfo: { type: [string, "null"] }
+        frequency: { type: [number, "null"] }
+        frequencyOrtho: { type: [number, "null"] }
+        frequencyLemma: { type: [number, "null"] }
+        cdOrtho: { type: [number, "null"] }
+        phono:
+          type: [string, "null"]
+          description: The lexicon's own notation, one symbol per phoneme.
+        phonoIpa: { type: [string, "null"] }
+        letterCount: { type: [integer, "null"] }
+        phonemeCount: { type: [integer, "null"] }
+        syllableCount: { type: [integer, "null"] }
+        syllPhono: { type: [string, "null"] }
+        cvPhono: { type: [string, "null"] }
+        old20: { type: [number, "null"] }
+        pld20: { type: [number, "null"] }
+        voisOrtho: { type: [integer, "null"] }
+        voisPhono: { type: [integer, "null"] }
+        homographCount: { type: [integer, "null"] }
+        homophoneCount: { type: [integer, "null"] }
+        puOrtho: { type: [integer, "null"] }
+        puPhon: { type: [integer, "null"] }
+        preval: { type: [number, "null"] }
+        prevalCount: { type: [integer, "null"] }
+        rtFlp: { type: [number, "null"] }
+        zrtFlp: { type: [number, "null"] }
+        errFlp: { type: [number, "null"] }
+
+    PoolToken:
+      type: object
+      additionalProperties: false
+      required: [position, slot, surface, lexical]
+      properties:
+        position: { type: integer, minimum: 1, description: 1-based, in sentence order. }
+        slot: { type: string, enum: [det, noun, adj, verb] }
+        surface: { type: string, minLength: 1, maxLength: 128 }
+        lexical:
+          description: The token's lexical entry, or `null` when the corpus never linked one — a determiner, for instance.
+          oneOf:
+            - { $ref: "#/components/schemas/LexicalProperties" }
+            - { type: "null" }
+
+    PoolItem:
+      type: object
+      additionalProperties: false
+      required: [itemId, itemRevision, text, homonyms, pairKey, tokens]
+      properties:
+        itemId: { type: string, minLength: 1, maxLength: 128 }
+        itemRevision: { type: string, minLength: 1, maxLength: 64 }
+        text: { type: string, minLength: 1, maxLength: 512 }
+        homonyms:
+          type: array
+          maxItems: 32
+          items: { type: string, minLength: 1, maxLength: 128 }
+        pairKey:
+          type: string
+          description: |
+            The unit a uniform draw samples: it keeps one variant per pair,
+            chosen by its seed, so two items sharing a `pairKey` are never in the
+            same draw.
+          minLength: 1
+          maxLength: 256
+        tokens:
+          type: array
+          minItems: 1
+          maxItems: 16
+          items: { $ref: "#/components/schemas/PoolToken" }
+
+    Pool:
+      type: object
+      additionalProperties: false
+      required:
+        [contractVersion, protocolRevision, materialRelease, language, filters, poolDigest,
+         items, issuedAt]
+      properties:
+        contractVersion: { $ref: "#/components/schemas/ContractVersion" }
+        protocolRevision: { $ref: "#/components/schemas/ProtocolRevision" }
+        materialRelease: { $ref: "#/components/schemas/MaterialRelease" }
+        language: { type: string, minLength: 2, maxLength: 16 }
+        filters: { $ref: "#/components/schemas/PoolFilters" }
+        poolDigest:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+          description: |
+            SHA-256, lowercase hex, over the sorted `itemId@itemRevision` lines,
+            one per item, each ended by a line feed. The pool revision is
+            declared; this is measured — two pools with the same digest list the
+            same items, whatever order they came in.
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/PoolItem" }
         issuedAt:
           type: integer
           description: Epoch milliseconds.

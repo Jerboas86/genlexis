@@ -1,10 +1,10 @@
 {
   "contractVersion": "1",
-  "contractHash": "87e7b598449688d7e85e02168eb59fdd177e2485c7c928f480ec8cd7637a9955",
+  "contractHash": "19b49f8fd2afe0a1891a658a609c7cf1fbb9fb7fbc1f287535daadc70908530c",
   "files": [
     {
       "file": "openapi.yaml",
-      "sha256": "9dc365e69707f866f71c8da513c33baee964226712bd2ee15fa3c414810d9e44"
+      "sha256": "d221fc30be9446b3bf866aa429fa27afbf26ea6f7bc85a0f0bccdaceb2bb129e"
     },
     {
       "file": "limits.json",
@@ -77,6 +77,14 @@
     {
       "file": "fixtures/error-unsupported-contract-version.json",
       "sha256": "baf4a744c9d383757870722d1e5616293bd5c395768bc8a6381f4f649c8f5907"
+    },
+    {
+      "file": "fixtures/pool-error-unknown-protocol-revision.json",
+      "sha256": "61d6a1b229f95257b39bc03b7106bac9b5bcab3c6ca19b33ec77dcf152126f06"
+    },
+    {
+      "file": "fixtures/pool-success.json",
+      "sha256": "35ed41535246e4f18f3e5bbb94c39189f3a4ca87e3930c9d535a30001b1a5ba6"
     },
     {
       "file": "fixtures/signature-vector.json",

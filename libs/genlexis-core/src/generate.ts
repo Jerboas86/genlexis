@@ -11,8 +11,11 @@ import type {
 	GenerateBalancedOptions,
 	GenerateOptions,
 	GenerateResult,
+	FindPoolOptions,
 	GenerationRepository,
 	HumanClassificationInput,
+	PoolEntry,
+	PoolRepository,
 	SentenceSummary,
 	SupportedPattern,
 	ValidationRepository
@@ -306,10 +309,39 @@ export type {
 	BalancedGenerateResult,
 	FindAcceptedItemsOptions,
 	FindAcceptedItemsWithIpaOptions,
+	FindPoolOptions,
 	GenerateBalancedOptions,
 	GenerateOptions,
 	GenerateResult,
 	GenerationRepository,
 	GenlexisRepository,
+	LexicalProperties,
+	PoolEntry,
+	PoolRepository,
+	PoolToken,
 	ValidationRepository
 } from './types.js';
+
+/**
+ * The whole pool a draw under these filters samples from: every accepted
+ * variant of every pair, each token with its lexical entry.
+ *
+ * Exactly the sentences a draw can serve — the same filters, and the same rule
+ * that a sentence whose transcriptions yield no phoneme is not drawable — so a
+ * consumer that studies the pool studies the universe its sessions sample. One
+ * variant per pair (`dedupeKey`) is what a draw keeps; the pool keeps them all,
+ * so that the two-stage sampling can be reproduced rather than assumed.
+ */
+export const describePool = async (
+	options: FindPoolOptions & { tokenizerOptions?: GenerateBalancedOptions['tokenizerOptions'] },
+	repository: GenerationRepository & PoolRepository
+): Promise<PoolEntry[]> => {
+	const { tokenizerOptions, ...filters } = options;
+	const target = await repository.getPhonemeDistribution(filters.language);
+	if (Object.keys(target).length === 0) {
+		throw new Error(`No phoneme distribution found for language "${filters.language}"`);
+	}
+	const tokenizer = createIpaTokenizer(Object.keys(target), tokenizerOptions);
+	const entries = await repository.findPoolEntries(filters);
+	return entries.filter((entry) => Object.keys(phonemeCountsOf(entry, tokenizer)).length > 0);
+};

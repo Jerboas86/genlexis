@@ -1,0 +1,209 @@
+{
+  "name": "pool-success",
+  "contractVersion": "1",
+  "why": "A pool: every variant of a pair is listed, sharing one pairKey that a draw would reduce to one item; nouns and verbs carry their lexical entries, the determiner none; the digest covers the sorted item identities.",
+  "request": {
+    "method": "GET",
+    "path": "/v1/pools/genlexis-fr-np-verb-r2",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "contractVersion": "1",
+      "protocolRevision": "genlexis-fr-np-verb-r2",
+      "materialRelease": {
+        "sourceId": "genlexis-fr",
+        "revision": "r1",
+        "poolRevision": "pool-2026-09-11"
+      },
+      "language": "fr-FR",
+      "filters": {
+        "pattern": "np_verb",
+        "lexicalDensity": "medium"
+      },
+      "poolDigest": "40c5c5283f6426a04f0efd4cb923d9c3e3dad405df43977b351e73250bf2f170",
+      "items": [
+        {
+          "itemId": "101",
+          "itemRevision": "2062360f3215ac04",
+          "text": "Le chat dort",
+          "homonyms": [],
+          "pairKey": "chat dort",
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "Le",
+              "lexical": null
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "chat",
+              "lexical": {
+                "source": "lexique4",
+                "lemma": "chat",
+                "category": "NOM",
+                "gender": "m",
+                "number": "s",
+                "verbInfo": null,
+                "frequency": 49.703,
+                "frequencyOrtho": 49.725,
+                "frequencyLemma": 79.497,
+                "cdOrtho": 11.58757,
+                "phono": "Sa",
+                "phonoIpa": "ʃa",
+                "letterCount": 4,
+                "phonemeCount": 2,
+                "syllableCount": 1,
+                "syllPhono": "Sa",
+                "cvPhono": "CV",
+                "old20": 1.15,
+                "pld20": 1,
+                "voisOrtho": 9,
+                "voisPhono": 28,
+                "homographCount": 0,
+                "homophoneCount": 6,
+                "puOrtho": 4,
+                "puPhon": 2,
+                "preval": 100,
+                "prevalCount": 19,
+                "rtFlp": 574.96,
+                "zrtFlp": -0.777041124,
+                "errFlp": 0
+              }
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "dort",
+              "lexical": {
+                "source": "lexique4",
+                "lemma": "dormir",
+                "category": "VER",
+                "gender": null,
+                "number": "s",
+                "verbInfo": "ind:pre:3",
+                "frequency": 31.665,
+                "frequencyOrtho": 31.715,
+                "frequencyLemma": 266.32,
+                "cdOrtho": 11.71923,
+                "phono": "dOR",
+                "phonoIpa": "dɔʁ",
+                "letterCount": 4,
+                "phonemeCount": 3,
+                "syllableCount": 1,
+                "syllPhono": "dOR",
+                "cvPhono": "CVC",
+                "old20": 1.25,
+                "pld20": 1,
+                "voisOrtho": 13,
+                "voisPhono": 31,
+                "homographCount": 0,
+                "homophoneCount": 4,
+                "puOrtho": 0,
+                "puPhon": 0,
+                "preval": 100,
+                "prevalCount": 17,
+                "rtFlp": 632.875,
+                "zrtFlp": -0.50297164,
+                "errFlp": 0
+              }
+            }
+          ]
+        },
+        {
+          "itemId": "102",
+          "itemRevision": "eb129e108fb52af3",
+          "text": "Un chat dort",
+          "homonyms": [],
+          "pairKey": "chat dort",
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "Un",
+              "lexical": null
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "chat",
+              "lexical": {
+                "source": "lexique4",
+                "lemma": "chat",
+                "category": "NOM",
+                "gender": "m",
+                "number": "s",
+                "verbInfo": null,
+                "frequency": 49.703,
+                "frequencyOrtho": 49.725,
+                "frequencyLemma": 79.497,
+                "cdOrtho": 11.58757,
+                "phono": "Sa",
+                "phonoIpa": "ʃa",
+                "letterCount": 4,
+                "phonemeCount": 2,
+                "syllableCount": 1,
+                "syllPhono": "Sa",
+                "cvPhono": "CV",
+                "old20": 1.15,
+                "pld20": 1,
+                "voisOrtho": 9,
+                "voisPhono": 28,
+                "homographCount": 0,
+                "homophoneCount": 6,
+                "puOrtho": 4,
+                "puPhon": 2,
+                "preval": 100,
+                "prevalCount": 19,
+                "rtFlp": 574.96,
+                "zrtFlp": -0.777041124,
+                "errFlp": 0
+              }
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "dort",
+              "lexical": {
+                "source": "lexique4",
+                "lemma": "dormir",
+                "category": "VER",
+                "gender": null,
+                "number": "s",
+                "verbInfo": "ind:pre:3",
+                "frequency": 31.665,
+                "frequencyOrtho": 31.715,
+                "frequencyLemma": 266.32,
+                "cdOrtho": 11.71923,
+                "phono": "dOR",
+                "phonoIpa": "dɔʁ",
+                "letterCount": 4,
+                "phonemeCount": 3,
+                "syllableCount": 1,
+                "syllPhono": "dOR",
+                "cvPhono": "CVC",
+                "old20": 1.25,
+                "pld20": 1,
+                "voisOrtho": 13,
+                "voisPhono": 31,
+                "homographCount": 0,
+                "homophoneCount": 4,
+                "puOrtho": 0,
+                "puPhon": 0,
+                "preval": 100,
+                "prevalCount": 17,
+                "rtFlp": 632.875,
+                "zrtFlp": -0.50297164,
+                "errFlp": 0
+              }
+            }
+          ]
+        }
+      ],
+      "issuedAt": 1791000000000
+    }
+  }
+}

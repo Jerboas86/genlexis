@@ -4,6 +4,7 @@ import {
 	DEFAULT_PATTERNS,
 	frenchLanguagePreset,
 	type GenlexisRepository,
+	type PoolRepository,
 	type HumanClassificationInput,
 	type SemanticsLabel,
 	type SentenceSummary,
@@ -98,7 +99,7 @@ const validationRepository = {
 	}
 };
 
-export const repository: GenlexisRepository = {
+export const repository: GenlexisRepository & PoolRepository = {
 	...generationRepository,
 	...validationRepository
 };

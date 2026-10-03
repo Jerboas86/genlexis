@@ -17,10 +17,10 @@ Node 20 or later. ESM only.
 
 ## Entry points
 
-| Specifier                         | Contents                                       |
-| --------------------------------- | ---------------------------------------------- |
-| `@genlexis/core`                  | the engine, its options and result types, pure |
-| `@genlexis/core/adapters/drizzle` | the Drizzle-backed `GenerationRepository`      |
+| Specifier                         | Contents                                                       |
+| --------------------------------- | -------------------------------------------------------------- |
+| `@genlexis/core`                  | the engine, its options and result types, pure                 |
+| `@genlexis/core/adapters/drizzle` | the Drizzle-backed `GenerationRepository` and `PoolRepository` |
 
 `drizzle-orm` is an **optional** peer dependency and is only needed by the
 adapter sub-path. Importing the main entry point never pulls it into a bundle.
@@ -63,6 +63,15 @@ With Drizzle:
 ```ts
 import { createDrizzleGenerationRepository } from '@genlexis/core/adapters/drizzle';
 ```
+
+## Describing a pool
+
+`describePool(filters, repository)` returns every sentence a draw under the same
+filters could serve — every variant of every pair (`dedupeKey`), not the one per
+pair a draw keeps — with each token and its lexical entry. It applies the draw's
+filters and its drawability rule, so the pool is exactly the universe draws
+sample. The repository adds `findPoolEntries` to `GenerationRepository`; the
+Drizzle adapter implements both.
 
 ## Compatibility
 

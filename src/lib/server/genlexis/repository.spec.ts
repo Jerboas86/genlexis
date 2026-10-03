@@ -90,6 +90,7 @@ describe('the repository surface', () => {
 			'findRandomAcceptedItems',
 			'findAcceptedItemsWithIpa',
 			'getPhonemeDistribution',
+			'findPoolEntries',
 			'findLeastVotedValidationCandidate',
 			'recordValidation',
 			'recordHumanClassification'

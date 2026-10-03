@@ -118,6 +118,81 @@ export type ValidationRepository = {
 
 export type GenlexisRepository = GenerationRepository & ValidationRepository;
 
+/**
+ * The lexical properties of one word, as the lexicon publishes them.
+ *
+ * Names follow the lexicon's columns rather than an interpretation of them: a
+ * consumer that models difficulty from these chooses its own reading, and a name
+ * here that claimed one would be a second, unreviewed definition.
+ */
+export type LexicalProperties = {
+	/** The lexicon the entry comes from, e.g. `lexique4`. */
+	source: string;
+	lemma: string | null;
+	category: string | null;
+	gender: string | null;
+	number: string | null;
+	verbInfo: string | null;
+	frequency: number | null;
+	frequencyOrtho: number | null;
+	frequencyLemma: number | null;
+	cdOrtho: number | null;
+	/** The lexicon's own phonemic notation, one symbol per phoneme. */
+	phono: string | null;
+	phonoIpa: string | null;
+	letterCount: number | null;
+	phonemeCount: number | null;
+	syllableCount: number | null;
+	syllPhono: string | null;
+	cvPhono: string | null;
+	old20: number | null;
+	pld20: number | null;
+	voisOrtho: number | null;
+	voisPhono: number | null;
+	homographCount: number | null;
+	homophoneCount: number | null;
+	puOrtho: number | null;
+	puPhon: number | null;
+	preval: number | null;
+	prevalCount: number | null;
+	rtFlp: number | null;
+	zrtFlp: number | null;
+	errFlp: number | null;
+};
+
+/** One token of a pooled sentence, with its lexical entry when it has one. */
+export type PoolToken = {
+	/** 1-based position in the sentence. */
+	position: number;
+	slot: string;
+	surface: string;
+	/** `null` for a token the corpus never linked to the lexicon, a determiner for instance. */
+	lexical: LexicalProperties | null;
+};
+
+/**
+ * One sentence of the accepted pool, every token described. `phonoIpas` are the
+ * transcriptions a draw tokenises — the noun's, then the adjective's and the
+ * verb's when the pattern has them.
+ */
+export type PoolEntry = AcceptedItemWithIpa & {
+	tokens: PoolToken[];
+};
+
+/**
+ * What a pool is filtered by: the same fixed parameters a draw is, without the
+ * seed, the size or the exclusions, which select *from* the pool.
+ */
+export type FindPoolOptions = Omit<FindAcceptedItemsWithIpaOptions, 'poolSize' | 'seed'>;
+
+/**
+ * Reads a whole accepted pool, every variant of every pair, for consumers that
+ * study the material rather than draw from it.
+ */
+export type PoolRepository = {
+	findPoolEntries: (options: FindPoolOptions) => Promise<PoolEntry[]>;
+};
+
 export type PatternSpec = {
 	hasDet: boolean;
 	hasAdj: boolean;

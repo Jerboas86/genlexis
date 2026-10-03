@@ -1,0 +1,16 @@
+{
+  "name": "pool-error-unknown-protocol-revision",
+  "contractVersion": "1",
+  "why": "A pool is named by a published protocol revision, never by filters; an unpublished one is refused rather than approximated, exactly as a draw is.",
+  "request": {
+    "method": "GET",
+    "path": "/v1/pools/genlexis-fr-np-verb-r9",
+    "body": null
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "error": "unknown_protocol_revision"
+    }
+  }
+}

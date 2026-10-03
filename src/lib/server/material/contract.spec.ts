@@ -4,7 +4,9 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONTRACT_VERSION, type DrawErrorCode } from './draws';
 import { canonicalRequest, verifyRequest } from './auth';
+import { describeProtocolPool } from './pools';
 import { PUBLISHED_REVISIONS, resolveProtocolRevision } from './registry';
+import type { PoolEntry } from '@genlexis/core';
 
 /**
  * The producer half of the contract tests.
@@ -22,7 +24,7 @@ interface Fixture {
 	name: string;
 	contractVersion: string;
 	why: string;
-	request: { method: string; path: string; body: Record<string, unknown> };
+	request: { method: string; path: string; body: Record<string, unknown> | null };
 	response: { status: number; body: Record<string, unknown> };
 }
 
@@ -38,6 +40,16 @@ function fixtures(): Fixture[] {
 		.filter((name) => name.endsWith('.json') && name !== 'signature-vector.json')
 		.sort()
 		.map((name) => JSON.parse(readFileSync(join(CONTRACT_DIR, 'fixtures', name), 'utf8')));
+}
+
+/** The draw fixtures: every fixture but the pool's. */
+function drawFixtures(): (Fixture & { request: { body: Record<string, unknown> } })[] {
+	return fixtures().filter((fixture) => !fixture.name.startsWith('pool-')) as never;
+}
+
+/** The pool fixtures, named `pool-*`. */
+function poolFixtures(): Fixture[] {
+	return fixtures().filter((fixture) => fixture.name.startsWith('pool-'));
 }
 
 const openapi = readFileSync(join(CONTRACT_DIR, 'openapi.yaml'), 'utf8');
@@ -58,8 +70,9 @@ describe('the published contract', () => {
 		}
 	});
 
-	it('describes only the draw endpoint — audio belongs to Voxa', () => {
+	it('describes the draw and the pool endpoints only — audio belongs to Voxa', () => {
 		expect(openapi).toContain('/v1/draws');
+		expect(openapi).toContain('/v1/pools/{protocolRevision}');
 		expect(openapi).not.toContain('/v1/assets/');
 		expect(openapi).not.toContain('SynthesisProvenance');
 	});
@@ -106,6 +119,7 @@ describe('the error vocabulary', () => {
 
 describe('the canonical fixtures', () => {
 	const all = fixtures();
+	const draws = drawFixtures();
 
 	it('are all at this contract version', () => {
 		expect(all.length).toBeGreaterThan(10);
@@ -118,7 +132,7 @@ describe('the canonical fixtures', () => {
 
 	it('address the draw endpoint with the request shape this service reads', () => {
 		const required = ['contractVersion', 'excludedDrawIds', 'idempotencyKey', 'protocolRevision'];
-		for (const fixture of all) {
+		for (const fixture of draws) {
 			expect(fixture.request.path).toBe('/v1/draws');
 			expect(fixture.request.method).toBe('POST');
 			for (const field of required) expect(fixture.request.body).toHaveProperty(field);
@@ -129,7 +143,7 @@ describe('the canonical fixtures', () => {
 		// The contract is closed, so a stray field in any other fixture would be
 		// asserting a request the service must refuse.
 		const required = ['contractVersion', 'excludedDrawIds', 'idempotencyKey', 'protocolRevision'];
-		const withExtras = all.filter((fixture) =>
+		const withExtras = draws.filter((fixture) =>
 			Object.keys(fixture.request.body).some((key) => !required.includes(key))
 		);
 		expect(withExtras.map((fixture) => fixture.name)).toEqual(['error-unknown-field']);
@@ -137,7 +151,7 @@ describe('the canonical fixtures', () => {
 	});
 
 	it('stay inside the published limits', () => {
-		for (const fixture of all) {
+		for (const fixture of draws) {
 			const excluded = fixture.request.body.excludedDrawIds as string[];
 			expect(excluded.length).toBeLessThanOrEqual(limits.maxExcludedDrawIds);
 			const items = (fixture.response.body.items ?? []) as unknown[];
@@ -146,7 +160,7 @@ describe('the canonical fixtures', () => {
 	});
 
 	it('carry no audio, since the draw is linguistic material', () => {
-		for (const fixture of all) {
+		for (const fixture of draws) {
 			const items = (fixture.response.body.items ?? []) as Record<string, unknown>[];
 			for (const item of items) {
 				expect(item).not.toHaveProperty('audio');
@@ -158,12 +172,54 @@ describe('the canonical fixtures', () => {
 	});
 
 	it('report the pool revision beside the seed on every success', () => {
-		for (const fixture of all.filter((f) => f.response.status === 200)) {
+		for (const fixture of draws.filter((f) => f.response.status === 200)) {
 			const release = fixture.response.body.materialRelease as Record<string, unknown>;
 			// A seed alone does not replay a draw: the same seed against a changed
 			// pool produces different sentences.
 			expect(release.poolRevision).toBeTruthy();
 			expect((fixture.response.body.generation as Record<string, unknown>).seed).toBeTruthy();
+		}
+	});
+});
+
+describe('the pool fixtures', () => {
+	const pools = poolFixtures();
+
+	it('address the pool endpoint by revision, with no body', () => {
+		expect(pools.length).toBeGreaterThanOrEqual(2);
+		for (const fixture of pools) {
+			expect(fixture.request.method).toBe('GET');
+			expect(fixture.request.path).toMatch(/^\/v1\/pools\/[a-z0-9][a-z0-9._-]{0,62}[a-z0-9]$/);
+			expect(fixture.request.body).toBeNull();
+		}
+	});
+
+	it('are exactly what the service produces from the same sentences', async () => {
+		/*
+			The fixture's items, handed to the service as the core would return
+			them: its identities, its pair keys and its digest must come out the
+			same, or the two sides compute them differently.
+		*/
+		for (const fixture of pools.filter((f) => f.response.status === 200)) {
+			const body = fixture.response.body as {
+				protocolRevision: string;
+				issuedAt: number;
+				items: { itemId: string; text: string; pairKey: string; tokens: PoolEntry['tokens'] }[];
+			};
+			const entries: PoolEntry[] = body.items.map((item) => ({
+				sentenceId: Number(item.itemId),
+				sentence: item.text,
+				pattern: 'np_verb',
+				dedupeKey: item.pairKey,
+				phonoIpas: [],
+				tokens: item.tokens
+			}));
+			const pool = await describeProtocolPool(body.protocolRevision, {
+				repository: {} as never,
+				describe: (async () => entries) as never,
+				now: () => body.issuedAt
+			});
+			expect(JSON.parse(JSON.stringify(pool))).toEqual(fixture.response.body);
 		}
 	});
 });

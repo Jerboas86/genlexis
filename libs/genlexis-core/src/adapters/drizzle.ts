@@ -89,6 +89,120 @@ const buildSeedOrders = (seed: string | undefined): { inner: SQL; outer: SQL } =
 /** The filters every drawable sentence passes, shared by a draw and a pool. */
 type CandidateFilters = Omit<FindAcceptedItemsWithIpaOptions, 'poolSize' | 'seed'>;
 
+/** The noun-level filters every query applies the same way. */
+type NounFilters = Pick<
+	FindAcceptedItemsOptions,
+	'pattern' | 'detType' | 'gender' | 'grammNumber' | 'lengthUnit' | 'length' | 'lexicalDensity'
+>;
+
+/**
+ * `JOIN` the token of one slot under `alias`, and, when asked, `LEFT JOIN` its
+ * lexical entry under `<alias>_le`.
+ */
+const tokenJoin = (
+	config: DrizzleRepositoryConfig,
+	alias: 'det' | 'adj' | 'verb',
+	slot: string,
+	withLexical: boolean
+): SQL => {
+	const token = ident(`${alias}_token`);
+	const join = sql`JOIN ${ident(config.schema.tokensTable)} ${token}
+					ON ${token}.sentence_id = s.sentence_id
+					AND ${token}.language = s.language
+					AND ${token}.slot = ${literal(slot)}`;
+	if (!withLexical) return join;
+	const entry = ident(`${alias}_le`);
+	return sql`${join}
+				LEFT JOIN ${ident(config.schema.lexicalEntriesTable)} ${entry}
+					ON ${entry}.id = ${token}.lexical_entry_id
+					AND ${entry}.language = ${token}.language`;
+};
+
+/** The determiner restriction of a `detType`, or nothing. */
+const detFilterFor = (spec: PatternSpec, detSet: readonly string[] | null): SQL =>
+	spec.hasDet && detSet && detSet.length > 0
+		? sql`AND LOWER(det_token.surface) IN (${sql.join(
+				detSet.map((d) => sql`${d}`),
+				sql`, `
+			)})`
+		: sql``;
+
+/** Gender, number, length, density and determiner: every filter on the noun phrase. */
+const nounPhraseFilters = (
+	options: NounFilters,
+	spec: PatternSpec,
+	preset: DrizzleRepositoryConfig['preset']
+): SQL => {
+	const gender = options.gender ? sql`AND noun_le.gender = ${options.gender}` : sql``;
+	const number = options.grammNumber ? sql`AND noun_le.number = ${options.grammNumber}` : sql``;
+	return sql`${gender}
+						${number}
+						${buildLengthFilter(options.length, options.lengthUnit)}
+						${buildDensityFilter(options.lexicalDensity, preset)}
+						${detFilterFor(spec, detSetFor(options.detType, preset))}`;
+};
+
+/** What a pair is: the noun with its adjective or, when `withVerb`, its verb. */
+const dedupeFor = (spec: PatternSpec, withVerb: boolean): SQL => {
+	if (spec.hasAdj) return sql`LOWER(noun_token.surface || ' ' || adj_token.surface)`;
+	if (spec.hasVerb && withVerb) return sql`LOWER(noun_token.surface || ' ' || verb_token.surface)`;
+	return sql`LOWER(noun_token.surface)`;
+};
+
+/** The accepted sentences and their noun token, the base of every query. */
+const acceptedWithNoun = (config: DrizzleRepositoryConfig, nounEntry: 'JOIN' | 'LEFT JOIN') =>
+	sql`FROM ${ident(config.schema.acceptanceView)} s
+					JOIN ${ident(config.schema.tokensTable)} noun_token
+						ON noun_token.sentence_id = s.sentence_id
+						AND noun_token.language = s.language
+						AND noun_token.slot = ${literal(config.slots.noun)}
+					${sql.raw(nounEntry)} ${ident(config.schema.lexicalEntriesTable)} noun_le
+						ON noun_le.id = noun_token.lexical_entry_id
+						AND noun_le.language = noun_token.language`;
+
+/**
+ * The `FROM … WHERE …` every drawable sentence passes: accepted, of the
+ * pattern, with a phonemic noun, inside the revision's filters. A draw and a
+ * pool read the same set, so a pool never lists a sentence no draw could
+ * serve, nor misses one a draw could.
+ */
+const drawableCandidates = (config: DrizzleRepositoryConfig, options: CandidateFilters) => {
+	const spec = specFor(options.pattern, config.patterns);
+	const from = sql`${acceptedWithNoun(config, 'JOIN')}
+					${spec.hasDet ? tokenJoin(config, 'det', config.slots.det, false) : sql``}
+					${spec.hasAdj ? tokenJoin(config, 'adj', config.slots.adj, true) : sql``}
+					${spec.hasVerb ? tokenJoin(config, 'verb', config.slots.verb, true) : sql``}`;
+	const where = sql`WHERE s.accepted = TRUE
+						AND s.language = ${options.language}
+						AND s.pattern = ${options.pattern}
+						AND noun_le.phono_ipa IS NOT NULL
+						AND noun_le.phono_ipa <> ''
+						${nounPhraseFilters(options, spec, config.preset)}`;
+	const ipaSelect = sql`${spec.hasAdj ? sql`, adj_le.phono_ipa AS "adjPhonoIpa"` : sql``}${
+		spec.hasVerb ? sql`, verb_le.phono_ipa AS "verbPhonoIpa"` : sql``
+	}`;
+	const ipaPick = sql`${spec.hasAdj ? sql`, "adjPhonoIpa"` : sql``}${
+		spec.hasVerb ? sql`, "verbPhonoIpa"` : sql``
+	}`;
+	return { from, where, dedupeExpr: dedupeFor(spec, true), ipaSelect, ipaPick };
+};
+
+/**
+ * The candidates of the unbalanced selection: no language or transcription
+ * requirement, and pairs keyed on the noun alone unless the pattern has an
+ * adjective. Older than the drawable set, and kept as it was.
+ */
+const randomCandidates = (config: DrizzleRepositoryConfig, options: FindAcceptedItemsOptions) => {
+	const spec = specFor(options.pattern, config.patterns);
+	const from = sql`${acceptedWithNoun(config, 'LEFT JOIN')}
+					${spec.hasDet ? tokenJoin(config, 'det', config.slots.det, false) : sql``}
+					${spec.hasAdj ? tokenJoin(config, 'adj', config.slots.adj, false) : sql``}`;
+	const where = sql`WHERE s.accepted = TRUE
+						AND s.pattern = ${options.pattern}
+						${nounPhraseFilters(options, spec, config.preset)}`;
+	return { from, where, dedupeExpr: dedupeFor(spec, false) };
+};
+
 /** One token row of a pool query, before grouping by sentence. */
 type PoolRow = AcceptedItem &
 	Omit<LexicalProperties, 'source'> & {
@@ -102,23 +216,28 @@ type PoolRow = AcceptedItem &
 		source: string | null;
 	};
 
-const LEXICAL_KEYS = [
+/** The lexical columns read as text. */
+const TEXT_KEYS = [
 	'lemma',
 	'category',
 	'gender',
 	'number',
 	'verbInfo',
+	'phono',
+	'phonoIpa',
+	'syllPhono',
+	'cvPhono'
+] as const satisfies readonly (keyof LexicalProperties)[];
+
+/** The lexical columns read as numbers. */
+const NUMERIC_KEYS = [
 	'frequency',
 	'frequencyOrtho',
 	'frequencyLemma',
 	'cdOrtho',
-	'phono',
-	'phonoIpa',
 	'letterCount',
 	'phonemeCount',
 	'syllableCount',
-	'syllPhono',
-	'cvPhono',
 	'old20',
 	'pld20',
 	'voisOrtho',
@@ -138,65 +257,41 @@ const LEXICAL_KEYS = [
 const numberOrNull = (value: unknown): number | null =>
 	value === null || value === undefined ? null : Number(value);
 
-const NUMERIC_KEYS = new Set<string>([
-	'frequency',
-	'frequencyOrtho',
-	'frequencyLemma',
-	'cdOrtho',
-	'letterCount',
-	'phonemeCount',
-	'syllableCount',
-	'old20',
-	'pld20',
-	'voisOrtho',
-	'voisPhono',
-	'homographCount',
-	'homophoneCount',
-	'puOrtho',
-	'puPhon',
-	'preval',
-	'prevalCount',
-	'rtFlp',
-	'zrtFlp',
-	'errFlp'
-]);
+/** A text column, with an empty value read as no value. */
+const textOrNull = (value: unknown): string | null =>
+	value === null || value === undefined || value === '' ? null : String(value);
+
+/** The lexical entry of a token row, or `null` when the token has none. */
+export const lexicalOf = (row: PoolRow): LexicalProperties | null => {
+	if (!row.hasLexical) return null;
+	const properties: Record<string, unknown> = { source: row.source ?? '' };
+	for (const key of TEXT_KEYS) properties[key] = textOrNull(row[key]);
+	for (const key of NUMERIC_KEYS) properties[key] = numberOrNull(row[key]);
+	return properties as LexicalProperties;
+};
+
+/** A pool entry from the first token row of its sentence, tokens still to come. */
+const entryOf = (row: PoolRow): PoolEntry => ({
+	sentenceId: row.sentenceId,
+	sentence: row.sentence,
+	pattern: row.pattern,
+	dedupeKey: row.dedupeKey,
+	phonoIpas: [row.nounPhonoIpa, row.adjPhonoIpa, row.verbPhonoIpa].filter((ipa): ipa is string =>
+		Boolean(ipa)
+	),
+	tokens: []
+});
 
 /** Token rows, ordered by sentence then position, grouped into pool entries. */
-const groupPoolRows = (rows: readonly PoolRow[]): PoolEntry[] => {
+export const groupPoolRows = (rows: readonly PoolRow[]): PoolEntry[] => {
 	const entries: PoolEntry[] = [];
-	let current: PoolEntry | undefined;
 	for (const row of rows) {
-		if (current?.sentenceId !== row.sentenceId) {
-			current = {
-				sentenceId: row.sentenceId,
-				sentence: row.sentence,
-				pattern: row.pattern,
-				dedupeKey: row.dedupeKey,
-				phonoIpas: [row.nounPhonoIpa, row.adjPhonoIpa, row.verbPhonoIpa].filter(
-					(ipa): ipa is string => Boolean(ipa)
-				),
-				tokens: []
-			};
-			entries.push(current);
-		}
-		let lexical: LexicalProperties | null = null;
-		if (row.hasLexical) {
-			const properties: Record<string, unknown> = { source: row.source ?? '' };
-			for (const key of LEXICAL_KEYS) {
-				const value = row[key];
-				properties[key] = NUMERIC_KEYS.has(key)
-					? numberOrNull(value)
-					: value === undefined || value === ''
-						? null
-						: value;
-			}
-			lexical = properties as LexicalProperties;
-		}
-		current.tokens.push({
+		if (entries.at(-1)?.sentenceId !== row.sentenceId) entries.push(entryOf(row));
+		entries.at(-1)!.tokens.push({
 			position: Number(row.position),
 			slot: row.slot,
 			surface: row.surface,
-			lexical
+			lexical: lexicalOf(row)
 		});
 	}
 	return entries;
@@ -206,102 +301,7 @@ export const createDrizzleGenerationRepository = (
 	db: DrizzleDb,
 	config: DrizzleRepositoryConfig
 ): GenerationRepository & PoolRepository => {
-	const { schema, slots, patterns, preset } = config;
-
-	const detSlot = literal(slots.det);
-	const nounSlot = literal(slots.noun);
-	const adjSlot = literal(slots.adj);
-	const verbSlot = literal(slots.verb);
-
-	/**
-	 * The `FROM … WHERE …` every drawable sentence passes: accepted, of the
-	 * pattern, with a phonemic noun, inside the revision's filters. A draw and a
-	 * pool read the same set, so a pool never lists a sentence no draw could
-	 * serve, nor misses one a draw could.
-	 */
-	const drawableCandidates = (options: CandidateFilters) => {
-		const spec = specFor(options.pattern, patterns);
-		const detSet = detSetFor(options.detType, preset);
-
-		const detJoin: SQL = spec.hasDet
-			? sql`JOIN ${ident(schema.tokensTable)} det_token
-					ON det_token.sentence_id = s.sentence_id
-					AND det_token.language = s.language
-					AND det_token.slot = ${detSlot}`
-			: sql``;
-
-		const adjJoin: SQL = spec.hasAdj
-			? sql`JOIN ${ident(schema.tokensTable)} adj_token
-					ON adj_token.sentence_id = s.sentence_id
-					AND adj_token.language = s.language
-					AND adj_token.slot = ${adjSlot}
-				LEFT JOIN ${ident(schema.lexicalEntriesTable)} adj_le
-					ON adj_le.id = adj_token.lexical_entry_id
-					AND adj_le.language = adj_token.language`
-			: sql``;
-
-		const verbJoin: SQL = spec.hasVerb
-			? sql`JOIN ${ident(schema.tokensTable)} verb_token
-					ON verb_token.sentence_id = s.sentence_id
-					AND verb_token.language = s.language
-					AND verb_token.slot = ${verbSlot}
-				LEFT JOIN ${ident(schema.lexicalEntriesTable)} verb_le
-					ON verb_le.id = verb_token.lexical_entry_id
-					AND verb_le.language = verb_token.language`
-			: sql``;
-
-		const detFilter: SQL =
-			spec.hasDet && detSet && detSet.length > 0
-				? sql`AND LOWER(det_token.surface) IN (${sql.join(
-						detSet.map((d) => sql`${d}`),
-						sql`, `
-					)})`
-				: sql``;
-
-		const dedupeExpr: SQL = spec.hasAdj
-			? sql`LOWER(noun_token.surface || ' ' || adj_token.surface)`
-			: spec.hasVerb
-				? sql`LOWER(noun_token.surface || ' ' || verb_token.surface)`
-				: sql`LOWER(noun_token.surface)`;
-
-		const genderFilter: SQL = options.gender ? sql`AND noun_le.gender = ${options.gender}` : sql``;
-		const numberFilter: SQL = options.grammNumber
-			? sql`AND noun_le.number = ${options.grammNumber}`
-			: sql``;
-		const lengthFilter = buildLengthFilter(options.length, options.lengthUnit);
-		const densityFilter = buildDensityFilter(options.lexicalDensity, preset);
-
-		const from = sql`FROM ${ident(schema.acceptanceView)} s
-					JOIN ${ident(schema.tokensTable)} noun_token
-						ON noun_token.sentence_id = s.sentence_id
-						AND noun_token.language = s.language
-						AND noun_token.slot = ${nounSlot}
-					JOIN ${ident(schema.lexicalEntriesTable)} noun_le
-						ON noun_le.id = noun_token.lexical_entry_id
-						AND noun_le.language = noun_token.language
-					${detJoin}
-					${adjJoin}
-					${verbJoin}`;
-		const where = sql`WHERE s.accepted = TRUE
-						AND s.language = ${options.language}
-						AND s.pattern = ${options.pattern}
-						AND noun_le.phono_ipa IS NOT NULL
-						AND noun_le.phono_ipa <> ''
-						${genderFilter}
-						${numberFilter}
-						${lengthFilter}
-						${densityFilter}
-						${detFilter}`;
-
-		const ipaSelect: SQL = sql`${spec.hasAdj ? sql`, adj_le.phono_ipa AS "adjPhonoIpa"` : sql``}${
-			spec.hasVerb ? sql`, verb_le.phono_ipa AS "verbPhonoIpa"` : sql``
-		}`;
-		const ipaPick: SQL = sql`${spec.hasAdj ? sql`, "adjPhonoIpa"` : sql``}${
-			spec.hasVerb ? sql`, "verbPhonoIpa"` : sql``
-		}`;
-
-		return { from, where, dedupeExpr, ipaSelect, ipaPick };
-	};
+	const { schema } = config;
 
 	return {
 		async countAcceptedSentences() {
@@ -314,43 +314,7 @@ export const createDrizzleGenerationRepository = (
 		},
 
 		async findRandomAcceptedItems(options: FindAcceptedItemsOptions): Promise<AcceptedItem[]> {
-			const spec = specFor(options.pattern, patterns);
-			const detSet = detSetFor(options.detType, preset);
-
-			const detJoin: SQL = spec.hasDet
-				? sql`JOIN ${ident(schema.tokensTable)} det_token
-						ON det_token.sentence_id = s.sentence_id
-						AND det_token.language = s.language
-						AND det_token.slot = ${detSlot}`
-				: sql``;
-
-			const adjJoin: SQL = spec.hasAdj
-				? sql`JOIN ${ident(schema.tokensTable)} adj_token
-						ON adj_token.sentence_id = s.sentence_id
-						AND adj_token.language = s.language
-						AND adj_token.slot = ${adjSlot}`
-				: sql``;
-
-			const detFilter: SQL =
-				spec.hasDet && detSet && detSet.length > 0
-					? sql`AND LOWER(det_token.surface) IN (${sql.join(
-							detSet.map((d) => sql`${d}`),
-							sql`, `
-						)})`
-					: sql``;
-
-			const dedupeExpr: SQL = spec.hasAdj
-				? sql`LOWER(noun_token.surface || ' ' || adj_token.surface)`
-				: sql`LOWER(noun_token.surface)`;
-
-			const genderFilter: SQL = options.gender
-				? sql`AND noun_le.gender = ${options.gender}`
-				: sql``;
-			const numberFilter: SQL = options.grammNumber
-				? sql`AND noun_le.number = ${options.grammNumber}`
-				: sql``;
-			const lengthFilter = buildLengthFilter(options.length, options.lengthUnit);
-			const densityFilter = buildDensityFilter(options.lexicalDensity, preset);
+			const { from, where, dedupeExpr } = randomCandidates(config, options);
 			const { inner: innerOrder, outer: outerOrder } = buildSeedOrders(options.seed);
 
 			const result = await db.execute<AcceptedItem>(sql`
@@ -360,23 +324,8 @@ export const createDrizzleGenerationRepository = (
 						s.sentence,
 						s.pattern,
 						${dedupeExpr} AS "dedupeKey"
-					FROM ${ident(schema.acceptanceView)} s
-					JOIN ${ident(schema.tokensTable)} noun_token
-						ON noun_token.sentence_id = s.sentence_id
-						AND noun_token.language = s.language
-						AND noun_token.slot = ${nounSlot}
-					LEFT JOIN ${ident(schema.lexicalEntriesTable)} noun_le
-						ON noun_le.id = noun_token.lexical_entry_id
-						AND noun_le.language = noun_token.language
-					${detJoin}
-					${adjJoin}
-					WHERE s.accepted = TRUE
-						AND s.pattern = ${options.pattern}
-						${genderFilter}
-						${numberFilter}
-						${lengthFilter}
-						${densityFilter}
-						${detFilter}
+					${from}
+					${where}
 					ORDER BY ${dedupeExpr}, ${innerOrder}
 				)
 				SELECT "sentenceId", sentence, pattern, "dedupeKey"
@@ -391,7 +340,7 @@ export const createDrizzleGenerationRepository = (
 		async findAcceptedItemsWithIpa(
 			options: FindAcceptedItemsWithIpaOptions
 		): Promise<AcceptedItemWithIpa[]> {
-			const { from, where, dedupeExpr, ipaSelect, ipaPick } = drawableCandidates(options);
+			const { from, where, dedupeExpr, ipaSelect, ipaPick } = drawableCandidates(config, options);
 			const { inner: innerOrder, outer: outerOrder } = buildSeedOrders(options.seed);
 
 			type Row = AcceptedItem & {
@@ -419,23 +368,19 @@ export const createDrizzleGenerationRepository = (
 				LIMIT ${options.poolSize}
 			`);
 
-			const rows = result.rows;
-			return rows.map((row) => {
-				const phonoIpas = [row.phonoIpa];
-				if (row.adjPhonoIpa) phonoIpas.push(row.adjPhonoIpa);
-				if (row.verbPhonoIpa) phonoIpas.push(row.verbPhonoIpa);
-				return {
-					sentenceId: row.sentenceId,
-					sentence: row.sentence,
-					pattern: row.pattern,
-					dedupeKey: row.dedupeKey,
-					phonoIpas
-				};
-			});
+			return result.rows.map((row) => ({
+				sentenceId: row.sentenceId,
+				sentence: row.sentence,
+				pattern: row.pattern,
+				dedupeKey: row.dedupeKey,
+				phonoIpas: [row.phonoIpa, row.adjPhonoIpa, row.verbPhonoIpa].filter((ipa): ipa is string =>
+					Boolean(ipa)
+				)
+			}));
 		},
 
 		async findPoolEntries(options: FindPoolOptions): Promise<PoolEntry[]> {
-			const { from, where, dedupeExpr, ipaSelect, ipaPick } = drawableCandidates(options);
+			const { from, where, dedupeExpr, ipaSelect, ipaPick } = drawableCandidates(config, options);
 
 			// Every variant of every pair: no `DISTINCT ON`, which is how a draw
 			// picks one variant per pair and is the consumer's to reproduce.

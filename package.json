@@ -6,7 +6,8 @@
 	"type": "module",
 	"packageManager": "pnpm@11.2.1",
 	"dependencies": {
-		"@genlexis/core": "workspace:*"
+		"@genlexis/core": "workspace:*",
+		"@neondatabase/serverless": "^1.1.0"
 	},
 	"scripts": {
 		"dev": "doppler run -p genlexis -c dev -- vite dev",
@@ -45,7 +46,6 @@
 		"@eslint/compat": "^2.1.1",
 		"@eslint/js": "^10.0.1",
 		"@inlang/paraglide-js": "^2.25.2",
-		"@neondatabase/serverless": "^1.1.0",
 		"@playwright/test": "^1.63.0",
 		"@sveltejs/adapter-cloudflare": "^7.2.9",
 		"@sveltejs/kit": "^2.70.3",

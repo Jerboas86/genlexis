@@ -218,3 +218,29 @@ describe('groupPoolRows', () => {
 		expect(groupPoolRows([])).toEqual([]);
 	});
 });
+
+describe('findSentenceTokens', () => {
+	it('groups the tokens of the sentences asked for, in position order', async () => {
+		const { repository, statements } = recording([
+			{ sentenceId: 7, position: 1, slot: 'det', surface: 'Le' },
+			{ sentenceId: 7, position: 2, slot: 'noun', surface: 'chat' },
+			{ sentenceId: 9, position: 1, slot: 'noun', surface: "l'autorité" }
+		]);
+
+		const tokens = await repository.findSentenceTokens('fr-FR', [7, 9]);
+
+		expect(tokens.get(7)).toEqual([
+			{ position: 1, slot: 'det', surface: 'Le' },
+			{ position: 2, slot: 'noun', surface: 'chat' }
+		]);
+		expect(tokens.get(9)).toHaveLength(1);
+		expect(statements[0]!.params).toEqual(['fr-FR', 7, 9]);
+	});
+
+	it('asks nothing for no sentences', async () => {
+		const { repository, statements } = recording();
+
+		expect((await repository.findSentenceTokens('fr-FR', [])).size).toBe(0);
+		expect(statements).toHaveLength(0);
+	});
+});

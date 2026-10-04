@@ -319,6 +319,8 @@ export type {
 	PoolEntry,
 	PoolRepository,
 	PoolToken,
+	SentenceToken,
+	TokenRepository,
 	ValidationRepository
 } from './types.js';
 

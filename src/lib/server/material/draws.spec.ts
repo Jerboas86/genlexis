@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	createDraw,
-	type Draw,
 	type DrawDependencies,
 	type DrawRepository,
+	type DrawToken,
+	type LedgerDraw,
 	type StoredDraw
 } from './draws';
 import { itemIdentityKey, itemRevisionOf } from './fingerprint';
@@ -26,7 +27,7 @@ class MemoryRepository implements DrawRepository {
 		return drawIds.flatMap((drawId) => this.itemsByDraw.get(drawId) ?? []);
 	}
 
-	async persist(draw: Draw, idempotencyKey: string, fingerprint: string): Promise<void> {
+	async persist(draw: LedgerDraw, idempotencyKey: string, fingerprint: string): Promise<void> {
 		this.persisted += 1;
 		this.byKey.set(idempotencyKey, { fingerprint, draw });
 		this.itemsByDraw.set(draw.drawId, draw.items.map(itemIdentityKey));
@@ -62,12 +63,25 @@ function poolGenerator(poolSize: number, distance = 0.01) {
 	}) as unknown as DrawDependencies['generate'];
 }
 
+/** Every sentence as three tokens — a determiner, a noun, a verb — as the corpus stores them. */
+const findSentenceTokens = vi.fn(async (_language: string, ids: readonly number[]) => {
+	const tokens = new Map<number, DrawToken[]>();
+	for (const id of ids)
+		tokens.set(id, [
+			{ position: 1, slot: 'det', surface: 'le' },
+			{ position: 2, slot: 'noun', surface: `chat${id}` },
+			{ position: 3, slot: 'verb', surface: 'dort' }
+		]);
+	return tokens;
+});
+
 function dependencies(overrides: Partial<DrawDependencies> = {}): DrawDependencies {
 	let drawCounter = 0;
 	return {
 		repository: new MemoryRepository(),
 		generate: poolGenerator(500),
 		generationRepository: {} as never,
+		findSentenceTokens,
 		now: () => 1_756_300_000_000,
 		newDrawId: () => (drawCounter++).toString(16).padStart(32, '0'),
 		newSeed: (attempt) => `seed-${attempt}`,
@@ -402,5 +416,32 @@ describe('the uniform revision', () => {
 		expect(uniform).not.toHaveBeenCalled();
 		expect(draw.generation.selection).toBe('balanced');
 		expect(draw.generation.phonemeBalanceTolerance).toBe(0.13);
+	});
+});
+
+describe('the tokens of a drawn item', () => {
+	it('come with every item, so a consumer can tell the determiner from the content words', async () => {
+		const draw = await createDraw(request(), dependencies());
+
+		for (const item of draw.items) {
+			expect(item.tokens.map((token) => token.slot)).toEqual(['det', 'noun', 'verb']);
+		}
+	});
+
+	it('are read again on a replay, since the ledger stores the items without them', async () => {
+		const deps = dependencies();
+		const first = await createDraw(request(), deps);
+		const stored = (deps.repository as MemoryRepository).byKey.values().next().value!;
+		expect(stored.draw.items[0]).not.toHaveProperty('tokens');
+
+		const replay = await createDraw(request(), deps);
+
+		expect(replay.items).toEqual(first.items);
+	});
+
+	it('are a fault of the service when the corpus lost a sentence', async () => {
+		await expect(
+			createDraw(request(), dependencies({ findSentenceTokens: async () => new Map() }))
+		).rejects.toMatchObject({ code: 'service_unavailable' });
 	});
 });

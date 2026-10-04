@@ -32,6 +32,7 @@ import {
 	requestFingerprint
 } from './fingerprint';
 import { resolveProtocolRevision, type ProtocolConfiguration } from './registry';
+import type { TokenRepository } from '@genlexis/core';
 
 export const CONTRACT_VERSION = '1';
 
@@ -57,11 +58,31 @@ export class DrawError extends Error {
 	}
 }
 
-export interface DrawItem {
+/** One token of an item: its position, its role, and how it is written. */
+export interface DrawToken {
+	position: number;
+	slot: string;
+	surface: string;
+}
+
+/** An item as the draw ledger stores it: its identity and its text. */
+export interface StoredDrawItem {
 	itemId: string;
 	itemRevision: string;
 	text: string;
 	homonyms: string[];
+}
+
+/**
+ * An item as the contract publishes it: with its tokens, so a consumer can score
+ * some words and not others — the content words without the determiner.
+ *
+ * The tokens are not stored with the draw: they are read again from the corpus
+ * on every answer, replay included. A sentence's tokens never change; a sentence
+ * whose text changed is another revision of the item.
+ */
+export interface DrawItem extends StoredDrawItem {
+	tokens: DrawToken[];
 }
 
 export interface Draw {
@@ -82,10 +103,13 @@ export interface Draw {
 	issuedAt: number;
 }
 
+/** A draw as the ledger stores it: its items without their tokens. */
+export type LedgerDraw = Omit<Draw, 'items'> & { items: StoredDrawItem[] };
+
 /** One stored draw, as the ledger replays it. */
 export interface StoredDraw {
 	fingerprint: string;
-	draw: Draw;
+	draw: LedgerDraw;
 }
 
 /**
@@ -101,7 +125,7 @@ export interface DrawRepository {
 	/** The `(itemId, itemRevision)` union of the named draws. */
 	resolveExcludedItems(drawIds: readonly string[]): Promise<string[]>;
 	/** Persists the draw, its items and the ledger entry in one transaction. */
-	persist(draw: Draw, idempotencyKey: string, fingerprint: string): Promise<void>;
+	persist(draw: LedgerDraw, idempotencyKey: string, fingerprint: string): Promise<void>;
 }
 
 export interface DrawRequest {
@@ -122,6 +146,8 @@ export interface DrawDependencies {
 	generateUniform?: BalancedGenerator;
 	/** The `GenerationRepository` the engine draws against. */
 	generationRepository: Parameters<BalancedGenerator>[1];
+	/** The tokens of given sentences, in position order: the corpus's. */
+	findSentenceTokens: TokenRepository['findSentenceTokens'];
 	now?: () => number;
 	newDrawId?: () => string;
 	newSeed?: (attempt: number) => string;
@@ -147,7 +173,7 @@ function optionsFor(configuration: ProtocolConfiguration): Record<string, unknow
 	return options;
 }
 
-async function toItems(sentences: readonly AcceptedSentence[]): Promise<DrawItem[]> {
+async function toItems(sentences: readonly AcceptedSentence[]): Promise<StoredDrawItem[]> {
 	return Promise.all(
 		sentences.map(async (sentence) => ({
 			itemId: String(sentence.sentenceId),
@@ -197,7 +223,7 @@ type Attempt =
 	| { kind: 'short' }
 	| { kind: 'overlap' }
 	| { kind: 'unbalanced'; distance: number }
-	| { kind: 'servable'; items: DrawItem[]; distance: number };
+	| { kind: 'servable'; items: StoredDrawItem[]; distance: number };
 
 /** Judges one engine result against the revision and the exclusions. */
 async function judgeAttempt(
@@ -219,6 +245,31 @@ async function judgeAttempt(
 	const tolerance = configuration.phonemeBalanceTolerance;
 	if (tolerance !== null && distance > tolerance) return { kind: 'unbalanced', distance };
 	return { kind: 'servable', items, distance };
+}
+
+/**
+ * The items with their tokens, read from the corpus.
+ *
+ * An item without tokens is a corpus that lost a sentence's structure; it is a
+ * fault of this service, not a draw to serve with a hole in it.
+ */
+async function withTokens(
+	draw: LedgerDraw,
+	findSentenceTokens: DrawDependencies['findSentenceTokens']
+): Promise<Draw> {
+	const tokens = await findSentenceTokens(
+		draw.language,
+		draw.items.map((item) => Number(item.itemId))
+	);
+	return {
+		...draw,
+		items: draw.items.map((item) => {
+			const found = tokens.get(Number(item.itemId));
+			if (found === undefined || found.length === 0)
+				throw new DrawError('service_unavailable', `no tokens for item ${item.itemId}`);
+			return { ...item, tokens: found };
+		})
+	};
 }
 
 /**
@@ -265,7 +316,7 @@ export async function createDraw(
 	const stored = await dependencies.repository.findByIdempotencyKey(request.idempotencyKey);
 	if (stored !== null) {
 		if (stored.fingerprint !== fingerprint) throw new DrawError('idempotency_conflict');
-		return stored.draw;
+		return withTokens(stored.draw, dependencies.findSentenceTokens);
 	}
 
 	const forbidden = new Set(await dependencies.repository.resolveExcludedItems(excludedDrawIds));
@@ -288,7 +339,7 @@ export async function createDraw(
 		attempts.push(attempt);
 		if (attempt.kind !== 'servable') continue;
 
-		const draw: Draw = {
+		const draw: LedgerDraw = {
 			contractVersion: CONTRACT_VERSION,
 			drawId: (dependencies.newDrawId ?? createDrawId)(),
 			protocolRevision: request.protocolRevision,
@@ -313,7 +364,7 @@ export async function createDraw(
 		// has forgotten cannot be resolved, and every later rotation depends on
 		// resolving it.
 		await dependencies.repository.persist(draw, request.idempotencyKey, fingerprint);
-		return draw;
+		return withTokens(draw, dependencies.findSentenceTokens);
 	}
 
 	throw refusalAfter(attempts);

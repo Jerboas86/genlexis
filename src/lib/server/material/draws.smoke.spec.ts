@@ -29,6 +29,7 @@ describe.skipIf(!enabled)('a draw against a real database', () => {
 	let createDraw: typeof import('./draws').createDraw;
 	let repository: import('./draws').DrawRepository;
 	let generationRepository: import('./draws').DrawDependencies['generationRepository'];
+	let tokenRepository: import('@genlexis/core').TokenRepository;
 	let db: typeof import('$lib/server/db').db;
 	let schema: typeof import('$lib/server/db/schema');
 	let revision: string;
@@ -42,6 +43,7 @@ describe.skipIf(!enabled)('a draw against a real database', () => {
 			createDrawRepository: (await import('./drawsRepository')).createDrawRepository()
 		});
 		({ repository: generationRepository } = await import('$lib/server/genlexis/repository'));
+		({ repository: tokenRepository } = await import('$lib/server/genlexis/repository'));
 		({ db } = await import('$lib/server/db'));
 		schema = await import('$lib/server/db/schema');
 	});
@@ -74,7 +76,11 @@ describe.skipIf(!enabled)('a draw against a real database', () => {
 	const draw = (idempotencyKey: string, excludedDrawIds: string[] = []) =>
 		createDraw(
 			{ contractVersion: '1', protocolRevision: revision, idempotencyKey, excludedDrawIds },
-			{ repository, generationRepository }
+			{
+				repository,
+				generationRepository,
+				findSentenceTokens: (language, ids) => tokenRepository.findSentenceTokens(language, ids)
+			}
 		);
 
 	it('has a pool large enough for the published revision', async () => {
@@ -91,6 +97,12 @@ describe.skipIf(!enabled)('a draw against a real database', () => {
 		expect(result.materialRelease.poolRevision).toBeTruthy();
 		// Real sentences, not placeholders.
 		for (const item of result.items) expect(item.text.trim().length).toBeGreaterThan(0);
+		// Each with the tokens that spell it, so a consumer can tell the determiner apart.
+		const letters = (value: string) => value.toLowerCase().replace(/[^\p{L}]/gu, '');
+		for (const item of result.items) {
+			expect(letters(item.tokens.map((token) => token.surface).join(''))).toBe(letters(item.text));
+			expect(item.tokens.map((token) => token.slot)).toContain('noun');
+		}
 	});
 
 	it('replays the stored draw rather than drawing a second one', async () => {

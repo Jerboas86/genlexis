@@ -43,8 +43,25 @@
         {
           "itemId": "item-001",
           "itemRevision": "r1",
-          "text": "La phrase numéro 1",
-          "homonyms": []
+          "text": "Le chat tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "le"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "chat"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         }
       ],
       "issuedAt": 1756300000000

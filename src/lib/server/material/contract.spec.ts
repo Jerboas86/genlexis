@@ -164,10 +164,34 @@ describe('the canonical fixtures', () => {
 			const items = (fixture.response.body.items ?? []) as Record<string, unknown>[];
 			for (const item of items) {
 				expect(item).not.toHaveProperty('audio');
-				expect(Object.keys(item).sort()).toEqual(['homonyms', 'itemId', 'itemRevision', 'text']);
+				expect(Object.keys(item).sort()).toEqual([
+					'homonyms',
+					'itemId',
+					'itemRevision',
+					'text',
+					'tokens'
+				]);
 			}
 			expect(fixture.response.body).not.toHaveProperty('masker');
 			expect(fixture.response.body).not.toHaveProperty('gainRule');
+		}
+	});
+
+	it('give every item tokens that spell its text, determiner included', () => {
+		const letters = (value: string) => value.toLowerCase().replace(/[^\p{L}]/gu, '');
+		for (const fixture of draws) {
+			const items = (fixture.response.body.items ?? []) as {
+				text: string;
+				tokens: { position: number; slot: string; surface: string }[];
+			}[];
+			for (const item of items) {
+				const spelled = [...item.tokens]
+					.sort((a, b) => a.position - b.position)
+					.map((token) => token.surface)
+					.join('');
+				expect(letters(spelled)).toBe(letters(item.text));
+				expect(item.tokens.some((token) => token.slot === 'det')).toBe(true);
+			}
 		}
 	});
 

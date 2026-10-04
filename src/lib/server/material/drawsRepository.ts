@@ -10,7 +10,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { materialDrawItems, materialDraws, materialIdempotency } from '$lib/server/db/schema';
-import type { Draw, DrawRepository, StoredDraw } from './draws';
+import type { DrawRepository, LedgerDraw, StoredDraw } from './draws';
 import { itemIdentityKey } from './fingerprint';
 
 /**
@@ -28,7 +28,7 @@ type Database = typeof db;
 function toDraw(
 	row: typeof materialDraws.$inferSelect,
 	items: (typeof materialDrawItems.$inferSelect)[]
-): Draw {
+): LedgerDraw {
 	return {
 		contractVersion: '1',
 		drawId: row.drawId,
@@ -105,7 +105,7 @@ export function createDrawRepository(database: Database = db): DrawRepository {
 			return [...new Set(rows.map(itemIdentityKey))];
 		},
 
-		async persist(draw: Draw, idempotencyKey: string, fingerprint: string): Promise<void> {
+		async persist(draw: LedgerDraw, idempotencyKey: string, fingerprint: string): Promise<void> {
 			const expiresAt = new Date(draw.issuedAt + IDEMPOTENCY_RETENTION_DAYS * 24 * 60 * 60 * 1000);
 			// One transaction: a draw whose items were not written cannot be
 			// resolved, and a ledger entry pointing at a draw that does not exist

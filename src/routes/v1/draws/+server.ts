@@ -142,7 +142,8 @@ async function serve(parsed: ParsedRequest): Promise<Response> {
 	try {
 		const draw = await createDraw(parsed, {
 			repository: createDrawRepository(),
-			generationRepository
+			generationRepository,
+			findSentenceTokens: (language, ids) => generationRepository.findSentenceTokens(language, ids)
 		});
 		record({
 			event: 'draw_served',

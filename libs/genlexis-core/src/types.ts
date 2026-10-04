@@ -185,6 +185,20 @@ export type PoolEntry = AcceptedItemWithIpa & {
  */
 export type FindPoolOptions = Omit<FindAcceptedItemsWithIpaOptions, 'poolSize' | 'seed'>;
 
+/** One token of a sentence, without its lexical entry: what a draw's item carries. */
+export type SentenceToken = Omit<PoolToken, 'lexical'>;
+
+/**
+ * Reads the tokens of given sentences, in position order: the role of every
+ * word, which a consumer needs to score some words and not others.
+ */
+export type TokenRepository = {
+	findSentenceTokens: (
+		language: string,
+		sentenceIds: readonly number[]
+	) => Promise<Map<number, SentenceToken[]>>;
+};
+
 /**
  * Reads a whole accepted pool, every variant of every pair, for consumers that
  * study the material rather than draw from it.

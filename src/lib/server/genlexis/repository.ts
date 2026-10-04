@@ -5,6 +5,7 @@ import {
 	frenchLanguagePreset,
 	type GenlexisRepository,
 	type PoolRepository,
+	type TokenRepository,
 	type HumanClassificationInput,
 	type SemanticsLabel,
 	type SentenceSummary,
@@ -99,7 +100,7 @@ const validationRepository = {
 	}
 };
 
-export const repository: GenlexisRepository & PoolRepository = {
+export const repository: GenlexisRepository & PoolRepository & TokenRepository = {
 	...generationRepository,
 	...validationRepository
 };

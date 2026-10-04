@@ -46,8 +46,25 @@
         {
           "itemId": "item-007",
           "itemRevision": "r1",
-          "text": "La phrase numéro 7",
-          "homonyms": []
+          "text": "La fleur tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "fleur"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         }
       ],
       "issuedAt": 1756300000000

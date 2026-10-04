@@ -113,122 +113,462 @@
         {
           "itemId": "item-001",
           "itemRevision": "r1",
-          "text": "La phrase numéro 1",
-          "homonyms": []
+          "text": "Le chat tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "le"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "chat"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-002",
           "itemRevision": "r1",
-          "text": "La phrase numéro 2",
-          "homonyms": []
+          "text": "La pomme tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "pomme"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-003",
           "itemRevision": "r1",
-          "text": "La phrase numéro 3",
-          "homonyms": []
+          "text": "La voiture tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "voiture"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-004",
           "itemRevision": "r1",
-          "text": "La phrase numéro 4",
-          "homonyms": []
+          "text": "La porte tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "porte"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-005",
           "itemRevision": "r1",
-          "text": "La phrase numéro 5",
-          "homonyms": []
+          "text": "La lampe tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "lampe"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-006",
           "itemRevision": "r1",
-          "text": "La phrase numéro 6",
-          "homonyms": []
+          "text": "La table tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "table"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-007",
           "itemRevision": "r1",
-          "text": "La phrase numéro 7",
-          "homonyms": []
+          "text": "La fleur tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "fleur"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-008",
           "itemRevision": "r1",
-          "text": "La phrase numéro 8",
-          "homonyms": []
+          "text": "La cloche tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "cloche"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-009",
           "itemRevision": "r1",
-          "text": "La phrase numéro 9",
-          "homonyms": []
+          "text": "La montre tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "montre"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-010",
           "itemRevision": "r1",
-          "text": "La phrase numéro 10",
-          "homonyms": []
+          "text": "La barque tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "barque"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-011",
           "itemRevision": "r1",
-          "text": "La phrase numéro 11",
-          "homonyms": []
+          "text": "La bougie tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "bougie"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-012",
           "itemRevision": "r1",
-          "text": "La phrase numéro 12",
-          "homonyms": []
+          "text": "La cravate tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "cravate"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-013",
           "itemRevision": "r1",
-          "text": "La phrase numéro 13",
-          "homonyms": []
+          "text": "La fenêtre tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "fenêtre"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-014",
           "itemRevision": "r1",
-          "text": "La phrase numéro 14",
-          "homonyms": []
+          "text": "La guitare tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "guitare"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-015",
           "itemRevision": "r1",
-          "text": "La phrase numéro 15",
-          "homonyms": []
+          "text": "L'horloge tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "l'"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "horloge"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-016",
           "itemRevision": "r1",
-          "text": "La phrase numéro 16",
-          "homonyms": []
+          "text": "L'échelle tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "l'"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "échelle"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-017",
           "itemRevision": "r1",
-          "text": "La phrase numéro 17",
-          "homonyms": []
+          "text": "L'orange tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "l'"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "orange"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-018",
           "itemRevision": "r1",
-          "text": "La phrase numéro 18",
-          "homonyms": []
+          "text": "La théière tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "théière"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-019",
           "itemRevision": "r1",
-          "text": "La phrase numéro 19",
-          "homonyms": []
+          "text": "La valise tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "valise"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-020",
           "itemRevision": "r1",
-          "text": "La phrase numéro 20",
-          "homonyms": []
+          "text": "L'écharpe tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "l'"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "écharpe"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         }
       ],
       "issuedAt": 1756300000000

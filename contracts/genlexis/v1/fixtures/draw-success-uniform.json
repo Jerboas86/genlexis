@@ -43,14 +43,48 @@
         {
           "itemId": "item-002",
           "itemRevision": "r1",
-          "text": "La phrase numéro 2",
-          "homonyms": []
+          "text": "La pomme tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "pomme"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         },
         {
           "itemId": "item-003",
           "itemRevision": "r1",
-          "text": "La phrase numéro 3",
-          "homonyms": []
+          "text": "La voiture tombe.",
+          "homonyms": [],
+          "tokens": [
+            {
+              "position": 1,
+              "slot": "det",
+              "surface": "la"
+            },
+            {
+              "position": 2,
+              "slot": "noun",
+              "surface": "voiture"
+            },
+            {
+              "position": 3,
+              "slot": "verb",
+              "surface": "tombe"
+            }
+          ]
         }
       ],
       "issuedAt": 1756300000000

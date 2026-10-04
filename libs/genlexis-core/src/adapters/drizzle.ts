@@ -13,7 +13,9 @@ import type {
 	LexicalProperties,
 	PatternSpec,
 	PoolEntry,
-	PoolRepository
+	PoolRepository,
+	SentenceToken,
+	TokenRepository
 } from '../types.js';
 
 /**
@@ -300,7 +302,7 @@ export const groupPoolRows = (rows: readonly PoolRow[]): PoolEntry[] => {
 export const createDrizzleGenerationRepository = (
 	db: DrizzleDb,
 	config: DrizzleRepositoryConfig
-): GenerationRepository & PoolRepository => {
+): GenerationRepository & PoolRepository & TokenRepository => {
 	const { schema } = config;
 
 	return {
@@ -436,6 +438,30 @@ export const createDrizzleGenerationRepository = (
 			`);
 
 			return groupPoolRows(result.rows);
+		},
+
+		async findSentenceTokens(
+			language: string,
+			sentenceIds: readonly number[]
+		): Promise<Map<number, SentenceToken[]>> {
+			const tokens = new Map<number, SentenceToken[]>();
+			if (sentenceIds.length === 0) return tokens;
+			const result = await db.execute<SentenceToken & { sentenceId: number }>(sql`
+				SELECT t.sentence_id::int AS "sentenceId", t.position, t.slot, t.surface
+				FROM ${ident(schema.tokensTable)} t
+				WHERE t.language = ${language}
+					AND t.sentence_id IN (${sql.join(
+						sentenceIds.map((id) => sql`${id}`),
+						sql`, `
+					)})
+				ORDER BY t.sentence_id, t.position
+			`);
+			for (const { sentenceId, position, slot, surface } of result.rows) {
+				const list = tokens.get(sentenceId) ?? [];
+				list.push({ position: Number(position), slot, surface });
+				tokens.set(sentenceId, list);
+			}
+			return tokens;
 		},
 
 		async getPhonemeDistribution(language: string): Promise<PhonemeDistribution> {

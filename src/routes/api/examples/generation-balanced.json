@@ -1,0 +1,27 @@
+{
+	"selection": "phoneme_balanced",
+	"language": "fr-FR",
+	"seed": "api-docs-v1",
+	"options": {
+		"pattern": "np_verb",
+		"listCount": 1,
+		"itemsPerList": 1,
+		"filters": {},
+		"allowPartial": false
+	},
+	"lists": [
+		[
+			{
+				"sentenceId": 47116,
+				"sentence": "Une personnalité marque.",
+				"pattern": "np_verb"
+			}
+		]
+	],
+	"requestedItems": 1,
+	"totalItems": 1,
+	"complete": true,
+	"scores": [0.7658730158730157],
+	"aggregateScore": 0.7658730158730157,
+	"poolSize": 4000
+}

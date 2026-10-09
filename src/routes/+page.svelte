@@ -26,6 +26,11 @@
 			<strong>{m.generate_title()}</strong>
 			<span>{m.home_generate_description()}</span>
 		</a>
+		<a class="product-card api" href={resolve(localizeHref('/api') as Pathname)}>
+			<small>03</small>
+			<strong>{m.api_title()}</strong>
+			<span>{m.home_api_description()}</span>
+		</a>
 	</nav>
 
 	<section class="support">
@@ -73,7 +78,7 @@
 
 	.actions {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: var(--space-xl);
 		margin-top: var(--space-section);
 	}
@@ -104,6 +109,10 @@
 		background:
 			radial-gradient(circle at 78% 14%, rgba(191, 219, 254, 0.45), transparent 32%),
 			linear-gradient(135deg, var(--color-brand-blue), var(--color-brand-purple));
+	}
+
+	.api {
+		background: linear-gradient(135deg, var(--color-brand-purple), var(--color-brand-blue));
 	}
 
 	small {
@@ -166,6 +175,9 @@
 	@media (max-width: 900px) {
 		h1 {
 			font-size: var(--font-size-display-lg);
+		}
+		.actions {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 	}
 

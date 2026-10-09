@@ -1,0 +1,24 @@
+{
+	"selection": "random",
+	"language": "fr-FR",
+	"seed": "api-docs-v1",
+	"options": {
+		"pattern": "np_verb",
+		"listCount": 1,
+		"itemsPerList": 1,
+		"filters": {},
+		"allowPartial": false
+	},
+	"lists": [
+		[
+			{
+				"sentenceId": 46390,
+				"sentence": "Une nation marque.",
+				"pattern": "np_verb"
+			}
+		]
+	],
+	"requestedItems": 1,
+	"totalItems": 1,
+	"complete": true
+}

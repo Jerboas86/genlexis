@@ -7,7 +7,8 @@
 	"packageManager": "pnpm@11.2.1",
 	"dependencies": {
 		"@genlexis/core": "workspace:*",
-		"@neondatabase/serverless": "^1.1.0"
+		"@neondatabase/serverless": "^1.1.0",
+		"yaml": "1.10.3"
 	},
 	"scripts": {
 		"dev": "doppler run -p genlexis -c dev -- vite dev",

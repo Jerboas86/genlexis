@@ -17,11 +17,11 @@
  */
 
 import { json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { verifyRequest } from '$lib/server/material/auth';
-import { createDraw, DrawError, type DrawErrorCode } from '$lib/server/material/draws';
-import { createDrawRepository } from '$lib/server/material/drawsRepository';
-import { repository as generationRepository } from '$lib/server/genlexis/repository';
+import * as env from '$app/env/private';
+import { verifyRequest } from '#lib/server/material/auth.js';
+import { createDraw, DrawError, type DrawErrorCode } from '#lib/server/material/draws.js';
+import { createDrawRepository } from '#lib/server/material/drawsRepository.js';
+import { repository as generationRepository } from '#lib/server/genlexis/repository.js';
 import type { RequestHandler } from './$types';
 
 /** Bodies are small by construction; anything larger is not this contract. */

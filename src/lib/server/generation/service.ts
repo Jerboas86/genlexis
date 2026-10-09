@@ -1,6 +1,9 @@
 import type { BalancedGenerateResult, GenerateOptions, GenerateResult } from '@genlexis/core';
 import { SUPPORTED_PATTERNS } from '@genlexis/core';
-import { generateAcceptedSentences, generateBalancedAcceptedSentences } from '$lib/server/genlexis';
+import {
+	generateAcceptedSentences,
+	generateBalancedAcceptedSentences
+} from '#lib/server/genlexis/index.js';
 
 export type GenerationErrorCode =
 	'invalid_request' | 'unsupported_language' | 'insufficient_material' | 'corpus_unavailable';

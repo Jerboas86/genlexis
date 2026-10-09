@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { Pathname } from '$app/types';
+	import type { Path } from '$app/types';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import * as m from '$lib/paraglide/messages';
-	import { locales, localizeHref } from '$lib/paraglide/runtime';
-	import favicon from '$lib/assets/favicon.ico';
+	import * as m from '#lib/paraglide/messages.js';
+	import { locales, localizeHref } from '#lib/paraglide/runtime.js';
+	import favicon from '#lib/assets/favicon.ico';
 	import '../base.css';
 
 	let { children } = $props();
@@ -13,7 +13,7 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <header class="site-header">
-	<a class="brand" href={resolve(localizeHref('/') as Pathname)}>
+	<a class="brand" href={resolve(localizeHref('/') as Path)}>
 		<strong>{m.app_name()}</strong>
 		<span>{m.app_caption()}</span>
 	</a>
@@ -23,7 +23,7 @@
 
 <div style="display:none">
 	{#each locales as locale (locale)}
-		<a href={resolve(localizeHref(page.url.pathname, { locale }) as Pathname)}>{locale}</a>
+		<a href={resolve(localizeHref(page.url.pathname, { locale }) as Path)}>{locale}</a>
 	{/each}
 </div>
 

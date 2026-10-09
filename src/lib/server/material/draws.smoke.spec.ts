@@ -30,8 +30,8 @@ describe.skipIf(!enabled)('a draw against a real database', () => {
 	let repository: import('./draws').DrawRepository;
 	let generationRepository: import('./draws').DrawDependencies['generationRepository'];
 	let tokenRepository: import('@genlexis/core').TokenRepository;
-	let db: typeof import('$lib/server/db').db;
-	let schema: typeof import('$lib/server/db/schema');
+	let db: typeof import('#lib/server/db/index.js').db;
+	let schema: typeof import('#lib/server/db/schema.js');
 	let revision: string;
 	const written: string[] = [];
 
@@ -42,10 +42,10 @@ describe.skipIf(!enabled)('a draw against a real database', () => {
 		({ createDrawRepository: repository } = {
 			createDrawRepository: (await import('./drawsRepository')).createDrawRepository()
 		});
-		({ repository: generationRepository } = await import('$lib/server/genlexis/repository'));
-		({ repository: tokenRepository } = await import('$lib/server/genlexis/repository'));
-		({ db } = await import('$lib/server/db'));
-		schema = await import('$lib/server/db/schema');
+		({ repository: generationRepository } = await import('#lib/server/genlexis/repository.js'));
+		({ repository: tokenRepository } = await import('#lib/server/genlexis/repository.js'));
+		({ db } = await import('#lib/server/db/index.js'));
+		schema = await import('#lib/server/db/schema.js');
 	});
 
 	/**

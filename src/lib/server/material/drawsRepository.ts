@@ -8,8 +8,8 @@
  */
 
 import { eq, inArray } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { materialDrawItems, materialDraws, materialIdempotency } from '$lib/server/db/schema';
+import { db } from '#lib/server/db/index.js';
+import { materialDrawItems, materialDraws, materialIdempotency } from '#lib/server/db/schema.js';
 import type { DrawRepository, LedgerDraw, StoredDraw } from './draws';
 import { itemIdentityKey } from './fingerprint';
 

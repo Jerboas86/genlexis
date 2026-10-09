@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import type { Pathname } from '$app/types';
+	import type { Path, PathnameWithSearchOrHash } from '$app/types';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import * as m from '$lib/paraglide/messages';
-	import { localizeHref } from '$lib/paraglide/runtime';
-	import type { SemanticsLabel } from '$lib/server/genlexis';
+	import * as m from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import type { SemanticsLabel } from '#lib/server/genlexis/index.js';
 	import { candidate, classify, correct, incorrect } from './data.remote';
 	import { ANY_PATTERN, type PatternFilter } from './filter';
 
@@ -28,11 +28,11 @@
 	await initialQuery();
 
 	const setFilter = async (next: PatternFilter) => {
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		if (next === ANY_PATTERN) url.searchParams.delete('pattern');
 		else url.searchParams.set('pattern', next);
-		const href = `${url.pathname}${url.search}${url.hash}` as Pathname;
-		await goto(resolve(href), { keepFocus: true, noScroll: true, replaceState: false });
+		const href = `${url.pathname}${url.search}${url.hash}` as PathnameWithSearchOrHash;
+		await goto(resolve(href), { reset: false });
 	};
 
 	const filterLabel = (value: PatternFilter) =>
@@ -100,7 +100,7 @@
 </svelte:head>
 
 <main class="shell">
-	<a class="back" href={resolve(localizeHref('/') as Pathname)}>{m.back_home()}</a>
+	<a class="back" href={resolve(localizeHref('/') as Path)}>{m.back_home()}</a>
 
 	<section class="page-header">
 		<h1>{m.classify_title()}</h1>
@@ -133,17 +133,15 @@
 
 		{#if query.current.pattern === 'det_noun_adj' || query.current.pattern === 'np_verb'}
 			<form class="classify-form" {...classify}>
-				<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
-				<input type="hidden" name="filter" value={filter} />
+				<input {...classify.fields.sentenceId.as('hidden', String(query.current.sentenceId))} />
+				<input {...classify.fields.filter.as('hidden', filter)} />
 
 				<fieldset class="level">
 					<legend>{m.classify_appropriate_legend()}</legend>
 					<div class="choices choices-2">
 						<label class="choice choice-positive">
 							<input
-								type="radio"
-								name="appropriate"
-								value="true"
+								{...classify.fields.appropriate.as('radio', 'true')}
 								checked={appropriate === true}
 								onchange={() => (appropriate = true)}
 							/>
@@ -151,9 +149,7 @@
 						</label>
 						<label class="choice choice-negative">
 							<input
-								type="radio"
-								name="appropriate"
-								value="false"
+								{...classify.fields.appropriate.as('radio', 'false')}
 								checked={appropriate === false}
 								onchange={() => (appropriate = false)}
 							/>
@@ -167,9 +163,7 @@
 					<div class="choices choices-2">
 						<label class="choice choice-positive">
 							<input
-								type="radio"
-								name="grammatical"
-								value="true"
+								{...classify.fields.grammatical.as('radio', 'true')}
 								checked={grammatical === true}
 								onchange={() => (grammatical = true)}
 							/>
@@ -177,9 +171,7 @@
 						</label>
 						<label class="choice choice-negative">
 							<input
-								type="radio"
-								name="grammatical"
-								value="false"
+								{...classify.fields.grammatical.as('radio', 'false')}
 								checked={grammatical === false}
 								onchange={() => (grammatical = false)}
 							/>
@@ -194,9 +186,7 @@
 						{#each SEMANTICS_OPTIONS as option (option)}
 							<label class="choice choice-{option}">
 								<input
-									type="radio"
-									name="semantics"
-									value={option}
+									{...classify.fields.semantics.as('radio', option)}
 									checked={semantics === option}
 									onchange={() => (semantics = option)}
 								/>
@@ -213,15 +203,15 @@
 		{:else}
 			<div class="vote-actions" aria-label={m.classify_actions_label()}>
 				<form {...incorrect}>
-					<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
-					<input type="hidden" name="filter" value={filter} />
+					<input {...incorrect.fields.sentenceId.as('hidden', String(query.current.sentenceId))} />
+					<input {...incorrect.fields.filter.as('hidden', filter)} />
 					<button class="vote-button vote-button-incorrect" type="submit">
 						{m.classify_incorrect()}
 					</button>
 				</form>
 				<form {...correct}>
-					<input type="hidden" name="sentenceId" value={query.current.sentenceId} />
-					<input type="hidden" name="filter" value={filter} />
+					<input {...correct.fields.sentenceId.as('hidden', String(query.current.sentenceId))} />
+					<input {...correct.fields.filter.as('hidden', filter)} />
 					<button class="vote-button vote-button-correct" type="submit"
 						>{m.classify_correct()}</button
 					>

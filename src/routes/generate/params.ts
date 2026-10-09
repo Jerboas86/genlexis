@@ -13,7 +13,7 @@
  * decides what an invalid field becomes on the wire.
  */
 
-// The value comes from the engine itself, not from `$lib/server/genlexis`: that
+// The value comes from the engine itself, not from `#lib/server/genlexis/index.js`: that
 // barrel re-exports the repository, whose module graph opens the database on
 // import, and a type-only import was the only reason this file never did.
 import { SUPPORTED_PATTERNS } from '@genlexis/core';
@@ -24,7 +24,7 @@ import type {
 	LengthUnit,
 	LexicalDensity,
 	SupportedPattern
-} from '$lib/server/genlexis';
+} from '#lib/server/genlexis/index.js';
 
 /** How many accepted sentences must exist before generation is offered at all. */
 export const REQUIRED_SENTENCE_COUNT = 10;

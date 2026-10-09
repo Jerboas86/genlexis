@@ -27,3 +27,7 @@ libs/*/dist
 
 # vitest coverage output
 coverage/
+
+# Rewritten by the inlang SDK on every paraglide compile (git-ignored).
+project.inlang/.meta.json
+project.inlang/README.md

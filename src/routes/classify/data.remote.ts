@@ -4,7 +4,7 @@ import {
 	getValidationCandidate,
 	recordHumanClassification,
 	recordValidation
-} from '$lib/server/genlexis';
+} from '#lib/server/genlexis/index.js';
 import { ANY_PATTERN, type PatternFilter } from './filter';
 import { parseClassification, parseVote, toRepoFilter, type ClassifyRefusal } from './params';
 

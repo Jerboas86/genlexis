@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { generationApiKeys } from '$lib/server/db/schema';
+import { db } from '#lib/server/db/index.js';
+import { generationApiKeys } from '#lib/server/db/schema.js';
 
 const KEY_FORMAT = /^glx_[0-9a-f]{64}$/;
 

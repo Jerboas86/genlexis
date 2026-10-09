@@ -12,7 +12,7 @@ import { materialIdempotency } from '../db/schema';
  * Takes its connection rather than importing the application's: this runs from
  * the Worker's scheduled handler, outside any request, where `$env` does not
  * exist and the connection string comes from `env` directly. Nothing in this
- * module may import `$env` or `$lib`, or the Worker bundle stops building.
+ * module may import `$env`, or the Worker bundle stops building.
  */
 export async function purgeExpiredIdempotency(
 	database: NeonHttpDatabase<Record<string, unknown>>

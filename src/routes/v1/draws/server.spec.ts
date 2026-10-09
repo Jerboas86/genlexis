@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { canonicalRequest } from '$lib/server/material/auth';
-import { DrawError } from '$lib/server/material/draws';
+import { canonicalRequest } from '#lib/server/material/auth.js';
+import { DrawError } from '#lib/server/material/draws.js';
 
 /**
  * The route in front of the draw service: its gates, and its mapping of every
@@ -19,22 +19,22 @@ const KEY = 'a'.repeat(64);
 const DRAW_ID = 'b'.repeat(32);
 
 const createDraw = vi.fn();
-// The route reads its credentials from `$env/dynamic/private`, which the
+// The route reads its credentials from `$app/env/private`, which the
 // SvelteKit plugin fixes when vitest starts; stubbing `process.env` from inside
 // a test comes too late. The module is doubled instead, and the values are
 // the ones every signature below is made with.
-vi.mock('$env/dynamic/private', () => ({
-	env: {
-		PRIVATE_MATERIAL_API_TOKEN: 't'.repeat(32),
-		PRIVATE_MATERIAL_SIGNING_SECRET: 's'.repeat(32)
-	}
+vi.mock('$app/env/private', () => ({
+	PRIVATE_MATERIAL_API_TOKEN: 't'.repeat(32),
+	PRIVATE_MATERIAL_API_TOKEN_PREVIOUS: undefined,
+	PRIVATE_MATERIAL_SIGNING_SECRET: 's'.repeat(32),
+	PRIVATE_MATERIAL_SIGNING_SECRET_PREVIOUS: undefined
 }));
-vi.mock('$lib/server/material/draws', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/material/draws')>()),
+vi.mock('#lib/server/material/draws.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/material/draws.js')>()),
 	createDraw: (...args: unknown[]) => createDraw(...args)
 }));
-vi.mock('$lib/server/material/drawsRepository', () => ({ createDrawRepository: () => ({}) }));
-vi.mock('$lib/server/genlexis/repository', () => ({ repository: {} }));
+vi.mock('#lib/server/material/drawsRepository.js', () => ({ createDrawRepository: () => ({}) }));
+vi.mock('#lib/server/genlexis/repository.js', () => ({ repository: {} }));
 
 const URL_ = 'https://genlexis.test/v1/draws';
 

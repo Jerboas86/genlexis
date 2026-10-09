@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { Pathname } from '$app/types';
+	import type { Path } from '$app/types';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
-	import { getLocale, localizeHref } from '$lib/paraglide/runtime';
-	import * as m from '$lib/paraglide/messages';
+	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import * as m from '#lib/paraglide/messages.js';
 	import type { PageData } from './$types';
 	import type { DocEndpoint, DocExample, DocField, LocalizedText } from './+page.server';
 
@@ -284,7 +284,7 @@
 
 <div class="docs-shell">
 	<div class="docs-heading">
-		<a class="back" href={resolve(localizeHref('/') as Pathname)}>{m.back_home()}</a>
+		<a class="back" href={resolve(localizeHref('/') as Path)}>{m.back_home()}</a>
 		<h1>{m.api_title()}</h1>
 		<p>{m.api_intro()}</p>
 	</div>
@@ -310,7 +310,7 @@
 			</nav>
 			<div class="sidebar-footer">
 				<a
-					href={resolve(localizeHref('/api/openapi.yaml') as Pathname)}
+					href={resolve(localizeHref('/api/openapi.yaml') as Path)}
 					download="genlexis-openapi.yaml">{m.api_spec_link()}</a
 				>
 			</div>

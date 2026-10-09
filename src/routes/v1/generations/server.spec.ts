@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authorizeGeneration = vi.fn();
 const createGeneration = vi.fn();
-vi.mock('$lib/server/generation/keys', () => ({
+vi.mock('#lib/server/generation/keys.js', () => ({
 	authorizeGeneration: (...args: unknown[]) => authorizeGeneration(...args)
 }));
-vi.mock('$lib/server/generation/service', async (original) => ({
-	...(await original<typeof import('$lib/server/generation/service')>()),
+vi.mock('#lib/server/generation/service.js', async (original) => ({
+	...(await original<typeof import('#lib/server/generation/service.js')>()),
 	createGeneration: (...args: unknown[]) => createGeneration(...args)
 }));
 

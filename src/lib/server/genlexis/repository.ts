@@ -11,8 +11,8 @@ import {
 	type SentenceSummary,
 	type SupportedPattern
 } from '@genlexis/core';
-import { db } from '$lib/server/db';
-import { generatedSentenceClassifications } from '$lib/server/db/schema';
+import { db } from '#lib/server/db/index.js';
+import { generatedSentenceClassifications } from '#lib/server/db/schema.js';
 
 type LlmRow = Omit<SentenceSummary, 'llm'> & {
 	llmAppropriate: boolean | null;

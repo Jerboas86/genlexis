@@ -62,8 +62,8 @@ const question = (page: Page, legend: RegExp) =>
  * makes this the more faithful instrument as well as the working one.
  */
 const answer = async (page: Page, name: string, value: string) => {
-	await page.locator(`label:has(input[name="${name}"][value="${value}"])`).click();
-	await expect(page.locator(`input[name="${name}"][value="${value}"]`)).toBeChecked();
+	await page.locator(`label:has(input[name^="${name}/"][value="${value}"])`).click();
+	await expect(page.locator(`input[name^="${name}/"][value="${value}"]`)).toBeChecked();
 };
 
 test.describe('/classify', () => {
@@ -152,7 +152,7 @@ test.describe('/classify', () => {
 			// The LLM pass is a starting point for the human, not a hidden default: it
 			// has to be visible in the controls, or the judge cannot tell what they are
 			// agreeing with.
-			const appropriate = page.locator('input[name="appropriate"]:checked');
+			const appropriate = page.locator('input[name^="appropriate/"]:checked');
 			const anyChecked = await appropriate.count();
 			if (anyChecked > 0) {
 				// Whatever it pre-filled, the gating must agree with it.
@@ -235,7 +235,7 @@ test.describe('/classify', () => {
 		test('carries the filter through the submission so the next candidate matches it', async ({
 			page
 		}) => {
-			await expect(page.locator('input[name="filter"]').first()).toHaveValue(RICH_FILTER);
+			await expect(page.locator('input[name^="filter/"]').first()).toHaveValue(RICH_FILTER);
 			await answer(page, 'appropriate', 'false');
 			await submitButton(page).click();
 			await page.waitForLoadState('networkidle');
@@ -263,9 +263,9 @@ test.describe('/classify', () => {
 		});
 
 		test('sends the sentence id and the filter with the vote', async ({ page }) => {
-			const sentenceId = await page.locator('input[name="sentenceId"]').first().inputValue();
+			const sentenceId = await page.locator('input[name^="sentenceId/"]').first().inputValue();
 			expect(Number(sentenceId)).toBeGreaterThan(0);
-			await expect(page.locator('input[name="filter"]').first()).toHaveValue(SIMPLE_FILTER);
+			await expect(page.locator('input[name^="filter/"]').first()).toHaveValue(SIMPLE_FILTER);
 		});
 
 		test('actually writes the vote, rather than only advancing the screen', async ({ page }) => {

@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { canonicalRequest } from '$lib/server/material/auth';
-import { PoolError } from '$lib/server/material/pools';
+import { canonicalRequest } from '#lib/server/material/auth.js';
+import { PoolError } from '#lib/server/material/pools.js';
 
 /**
  * The route in front of the pool description: its gates, and its mapping of
@@ -14,17 +14,17 @@ const SECRET = 's'.repeat(32);
 const REVISION = 'genlexis-fr-np-verb-r2';
 
 const describeProtocolPool = vi.fn();
-vi.mock('$env/dynamic/private', () => ({
-	env: {
-		PRIVATE_MATERIAL_API_TOKEN: 't'.repeat(32),
-		PRIVATE_MATERIAL_SIGNING_SECRET: 's'.repeat(32)
-	}
+vi.mock('$app/env/private', () => ({
+	PRIVATE_MATERIAL_API_TOKEN: 't'.repeat(32),
+	PRIVATE_MATERIAL_API_TOKEN_PREVIOUS: undefined,
+	PRIVATE_MATERIAL_SIGNING_SECRET: 's'.repeat(32),
+	PRIVATE_MATERIAL_SIGNING_SECRET_PREVIOUS: undefined
 }));
-vi.mock('$lib/server/material/pools', async (importOriginal) => ({
-	...(await importOriginal<typeof import('$lib/server/material/pools')>()),
+vi.mock('#lib/server/material/pools.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('#lib/server/material/pools.js')>()),
 	describeProtocolPool: (...args: unknown[]) => describeProtocolPool(...args)
 }));
-vi.mock('$lib/server/genlexis/repository', () => ({ repository: {} }));
+vi.mock('#lib/server/genlexis/repository.js', () => ({ repository: {} }));
 
 /** A request signed the way a real caller signs it: an empty body. */
 function signed(path: string, { token = TOKEN, secret = SECRET, method = 'GET' } = {}): Request {

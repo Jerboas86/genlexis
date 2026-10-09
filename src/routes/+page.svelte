@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Pathname } from '$app/types';
+	import type { Path } from '$app/types';
 	import { resolve } from '$app/paths';
-	import * as m from '$lib/paraglide/messages';
-	import { localizeHref } from '$lib/paraglide/runtime';
+	import * as m from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
 </script>
 
 <svelte:head>
@@ -16,17 +16,17 @@
 	</section>
 
 	<nav aria-label={m.home_navigation_label()} class="actions">
-		<a class="product-card coral" href={resolve(localizeHref('/classify') as Pathname)}>
+		<a class="product-card coral" href={resolve(localizeHref('/classify') as Path)}>
 			<small>01</small>
 			<strong>{m.classify_title()}</strong>
 			<span>{m.home_classify_description()}</span>
 		</a>
-		<a class="product-card blue" href={resolve(localizeHref('/generate') as Pathname)}>
+		<a class="product-card blue" href={resolve(localizeHref('/generate') as Path)}>
 			<small>02</small>
 			<strong>{m.generate_title()}</strong>
 			<span>{m.home_generate_description()}</span>
 		</a>
-		<a class="product-card api" href={resolve(localizeHref('/api') as Pathname)}>
+		<a class="product-card api" href={resolve(localizeHref('/api') as Path)}>
 			<small>03</small>
 			<strong>{m.api_title()}</strong>
 			<span>{m.home_api_description()}</span>

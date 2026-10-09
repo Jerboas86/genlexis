@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import * as schema from './schema';
-import { env } from '$env/dynamic/private';
+import * as env from '$app/env/private';
 
 type Database = ReturnType<typeof create>;
 

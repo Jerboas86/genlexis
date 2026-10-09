@@ -22,12 +22,12 @@ const REVISION = 'genlexis-fr-np-verb-r2';
 describe.skipIf(!enabled)('a pool against a real database', () => {
 	let pool: import('./pools').Pool;
 	let configuration: import('./registry').ProtocolConfiguration;
-	let repository: typeof import('$lib/server/genlexis/repository').repository;
+	let repository: typeof import('#lib/server/genlexis/repository.js').repository;
 
 	beforeAll(async () => {
 		const { describeProtocolPool } = await import('./pools');
 		const { resolveProtocolRevision } = await import('./registry');
-		({ repository } = await import('$lib/server/genlexis/repository'));
+		({ repository } = await import('#lib/server/genlexis/repository.js'));
 		configuration = resolveProtocolRevision(REVISION)!;
 		pool = await describeProtocolPool(REVISION, { repository });
 	}, 60_000);

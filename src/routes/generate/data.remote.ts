@@ -6,7 +6,7 @@ import {
 	getAcceptedSentenceCount,
 	type BalancedGenerateResult,
 	type GenerateResult
-} from '$lib/server/genlexis';
+} from '#lib/server/genlexis/index.js';
 import {
 	MAX_ITEMS_PER_LIST,
 	MAX_LISTS,

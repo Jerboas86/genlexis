@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 /**
  * The Drizzle client, replaced by a recorder.
  *
- * `$lib/server/db` opens a Neon connection at import time and throws without
+ * `#lib/server/db/index.js` opens a Neon connection at import time and throws without
  * `PRIVATE_DATABASE_URL`, so it has to be mocked for the module to load at all.
  * That is not a workaround here: the point of these tests is what the repository
  * *asks* the database, and a real connection would answer instead of recording.
@@ -69,7 +69,7 @@ function renderSql(statement: unknown): { sql: string; params: unknown[] } {
 	return { sql: text, params };
 }
 
-vi.mock('$lib/server/db', () => ({ db: fakeDb }));
+vi.mock('#lib/server/db/index.js', () => ({ db: fakeDb }));
 
 const { repository } = await import('./repository');
 

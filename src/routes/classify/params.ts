@@ -12,7 +12,7 @@
  * how a corpus acquires votes nobody cast.
  */
 
-// Straight from the engine rather than through `$lib/server/genlexis`. That
+// Straight from the engine rather than through `#lib/server/genlexis/index.js`. That
 // barrel exists to inject a repository, and pulling it in here would open a
 // database connection at import time for the sake of one pure function.
 import { parseSupportedPattern, type SemanticsLabel } from '@genlexis/core';

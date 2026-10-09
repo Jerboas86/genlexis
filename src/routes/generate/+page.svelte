@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { Pathname } from '$app/types';
+	import type { Path } from '$app/types';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
-	import * as m from '$lib/paraglide/messages';
-	import { localizeHref } from '$lib/paraglide/runtime';
+	import * as m from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
 	import { acceptedSummary, generate, generateBalanced } from './data.remote';
 
 	const MAX_LISTS = 5;
@@ -93,6 +93,13 @@
 	const parseOptionalLength = (value: string | null) => {
 		if (value === null || value === '') return '';
 		return parseBoundedInteger(value, 1, MAX_NOUN_LENGTH) ?? '';
+	};
+
+	// The number fields spread `fields.x.as('number')`, which sets `type` and `value`
+	// itself; `bind:value` would lose the numeric coercion a static `type` gives it.
+	// An emptied field keeps the last valid count rather than becoming `null`.
+	const setCount = (input: HTMLInputElement, apply: (value: number) => void) => {
+		if (!Number.isNaN(input.valueAsNumber)) apply(input.valueAsNumber);
 	};
 
 	const createSeed = () => crypto.randomUUID();
@@ -233,7 +240,7 @@
 </svelte:head>
 
 <main class="shell">
-	<a class="back" href={resolve(localizeHref('/') as Pathname)}>{m.back_home()}</a>
+	<a class="back" href={resolve(localizeHref('/') as Path)}>{m.back_home()}</a>
 
 	<section class="page-header">
 		<h1>{m.generate_title()}</h1>
@@ -245,129 +252,147 @@
 			<p class="notice">{m.generate_disabled_body()}</p>
 		{/if}
 
-		<form
-			bind:this={formElement}
-			onsubmitcapture={prepareGenerationSubmit}
-			{...activeForm.enhance(async ({ submit }) => {
-				await submit();
-			})}
-			class="controls"
-		>
-			<input type="hidden" name="language" value={DEFAULT_LANGUAGE} />
-			<input type="hidden" name="seed" value={seed} />
-
-			<div class="field">
-				<label for="pattern">{m.pattern_label()}</label>
-				<select id="pattern" name="pattern" bind:value={pattern}>
-					<option value="det_noun">{m.pattern_det_noun()}</option>
-					<option value="noun">{m.pattern_noun()}</option>
-					<option value="det_noun_adj">{m.pattern_det_noun_adj()}</option>
-					<option value="np_verb">{m.pattern_np_verb()}</option>
-				</select>
-			</div>
-
-			{#if pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb'}
-				<div class="field">
-					<label for="detType">{m.generate_det_type_label()}</label>
-					<select id="detType" name="detType" bind:value={detType}>
-						<option value="">{m.generate_det_type_any()}</option>
-						<option value="definite">{m.generate_det_type_definite()}</option>
-						<option value="indefinite">{m.generate_det_type_indefinite()}</option>
-					</select>
-				</div>
-			{/if}
-
-			<fieldset class="group">
-				<legend>{m.generate_noun_legend()}</legend>
+		<!-- A remote form binds its submit handler to the form it was spread from, so
+		     switching between the two forms needs a fresh element. -->
+		{#key balanced}
+			<form
+				bind:this={formElement}
+				onsubmitcapture={prepareGenerationSubmit}
+				{...activeForm.enhance(async ({ submit }) => {
+					await submit();
+				})}
+				class="controls"
+			>
+				<input {...activeForm.fields.language.as('hidden', DEFAULT_LANGUAGE)} />
+				<input {...activeForm.fields.seed.as('hidden', seed)} />
 
 				<div class="field">
-					<label for="gender">{m.generate_gender_label()}</label>
-					<select id="gender" name="gender" bind:value={gender}>
-						<option value="">{m.generate_gender_any()}</option>
-						<option value="m">{m.generate_gender_masculine()}</option>
-						<option value="f">{m.generate_gender_feminine()}</option>
+					<label for="pattern">{m.pattern_label()}</label>
+					<select id="pattern" {...activeForm.fields.pattern.as('select')} bind:value={pattern}>
+						<option value="det_noun">{m.pattern_det_noun()}</option>
+						<option value="noun">{m.pattern_noun()}</option>
+						<option value="det_noun_adj">{m.pattern_det_noun_adj()}</option>
+						<option value="np_verb">{m.pattern_np_verb()}</option>
 					</select>
 				</div>
 
-				<div class="field">
-					<label for="grammNumber">{m.generate_number_label()}</label>
-					<select id="grammNumber" name="grammNumber" bind:value={grammNumber}>
-						<option value="">{m.generate_number_any()}</option>
-						<option value="s">{m.generate_number_singular()}</option>
-						<option value="p">{m.generate_number_plural()}</option>
-					</select>
-				</div>
+				{#if pattern === 'det_noun' || pattern === 'det_noun_adj' || pattern === 'np_verb'}
+					<div class="field">
+						<label for="detType">{m.generate_det_type_label()}</label>
+						<select id="detType" {...activeForm.fields.detType.as('select')} bind:value={detType}>
+							<option value="">{m.generate_det_type_any()}</option>
+							<option value="definite">{m.generate_det_type_definite()}</option>
+							<option value="indefinite">{m.generate_det_type_indefinite()}</option>
+						</select>
+					</div>
+				{/if}
+
+				<fieldset class="group">
+					<legend>{m.generate_noun_legend()}</legend>
+
+					<div class="field">
+						<label for="gender">{m.generate_gender_label()}</label>
+						<select id="gender" {...activeForm.fields.gender.as('select')} bind:value={gender}>
+							<option value="">{m.generate_gender_any()}</option>
+							<option value="m">{m.generate_gender_masculine()}</option>
+							<option value="f">{m.generate_gender_feminine()}</option>
+						</select>
+					</div>
+
+					<div class="field">
+						<label for="grammNumber">{m.generate_number_label()}</label>
+						<select
+							id="grammNumber"
+							{...activeForm.fields.grammNumber.as('select')}
+							bind:value={grammNumber}
+						>
+							<option value="">{m.generate_number_any()}</option>
+							<option value="s">{m.generate_number_singular()}</option>
+							<option value="p">{m.generate_number_plural()}</option>
+						</select>
+					</div>
+
+					<div class="field">
+						<label for="lengthUnit">{m.generate_length_unit_label()}</label>
+						<select
+							id="lengthUnit"
+							{...activeForm.fields.lengthUnit.as('select')}
+							bind:value={lengthUnit}
+						>
+							<option value="syllables">{m.generate_length_unit_syllables()}</option>
+							<option value="phonemes">{m.generate_length_unit_phonemes()}</option>
+						</select>
+					</div>
+
+					<div class="field">
+						<label for="length">{m.generate_length_label()}</label>
+						<input
+							id="length"
+							{...activeForm.fields.length.as('number')}
+							min="1"
+							max={MAX_NOUN_LENGTH}
+							placeholder={m.generate_length_any()}
+							value={length}
+							oninput={(event) =>
+								(length =
+									event.currentTarget.value === '' ? '' : event.currentTarget.valueAsNumber)}
+						/>
+					</div>
+
+					<div class="field">
+						<label for="lexicalDensity">{m.generate_lexical_density_label()}</label>
+						<select
+							id="lexicalDensity"
+							{...activeForm.fields.lexicalDensity.as('select')}
+							bind:value={lexicalDensity}
+						>
+							<option value="">{m.generate_lexical_density_any()}</option>
+							<option value="high">{m.generate_lexical_density_high()}</option>
+							<option value="medium">{m.generate_lexical_density_medium()}</option>
+							<option value="low">{m.generate_lexical_density_low()}</option>
+						</select>
+					</div>
+				</fieldset>
 
 				<div class="field">
-					<label for="lengthUnit">{m.generate_length_unit_label()}</label>
-					<select id="lengthUnit" name="lengthUnit" bind:value={lengthUnit}>
-						<option value="syllables">{m.generate_length_unit_syllables()}</option>
-						<option value="phonemes">{m.generate_length_unit_phonemes()}</option>
-					</select>
-				</div>
-
-				<div class="field">
-					<label for="length">{m.generate_length_label()}</label>
+					<label for="listCount">{m.generate_list_count_label()}</label>
 					<input
-						id="length"
-						name="length"
-						type="number"
+						id="listCount"
+						{...activeForm.fields.listCount.as('number')}
 						min="1"
-						max={MAX_NOUN_LENGTH}
-						placeholder={m.generate_length_any()}
-						bind:value={length}
+						max={MAX_LISTS}
+						value={listCount}
+						oninput={(event) => setCount(event.currentTarget, (value) => (listCount = value))}
 					/>
 				</div>
 
 				<div class="field">
-					<label for="lexicalDensity">{m.generate_lexical_density_label()}</label>
-					<select id="lexicalDensity" name="lexicalDensity" bind:value={lexicalDensity}>
-						<option value="">{m.generate_lexical_density_any()}</option>
-						<option value="high">{m.generate_lexical_density_high()}</option>
-						<option value="medium">{m.generate_lexical_density_medium()}</option>
-						<option value="low">{m.generate_lexical_density_low()}</option>
-					</select>
+					<label for="itemsPerList">{m.generate_items_per_list_label()}</label>
+					<input
+						id="itemsPerList"
+						{...activeForm.fields.itemsPerList.as('number')}
+						min="1"
+						max={MAX_ITEMS_PER_LIST}
+						value={itemsPerList}
+						oninput={(event) => setCount(event.currentTarget, (value) => (itemsPerList = value))}
+					/>
 				</div>
-			</fieldset>
 
-			<div class="field">
-				<label for="listCount">{m.generate_list_count_label()}</label>
-				<input
-					id="listCount"
-					name="listCount"
-					type="number"
-					min="1"
-					max={MAX_LISTS}
-					bind:value={listCount}
-				/>
-			</div>
+				<label class="toggle">
+					<input type="checkbox" bind:checked={balanced} data-testid="balance-toggle" />
+					<span class="toggle-text">
+						<span class="toggle-label">{m.generate_balance_label()}</span>
+						<span class="toggle-help">{m.generate_balance_help()}</span>
+					</span>
+				</label>
 
-			<div class="field">
-				<label for="itemsPerList">{m.generate_items_per_list_label()}</label>
-				<input
-					id="itemsPerList"
-					name="itemsPerList"
-					type="number"
-					min="1"
-					max={MAX_ITEMS_PER_LIST}
-					bind:value={itemsPerList}
-				/>
-			</div>
-
-			<label class="toggle">
-				<input type="checkbox" bind:checked={balanced} data-testid="balance-toggle" />
-				<span class="toggle-text">
-					<span class="toggle-label">{m.generate_balance_label()}</span>
-					<span class="toggle-help">{m.generate_balance_help()}</span>
-				</span>
-			</label>
-
-			<div class="actions">
-				<button class="button-primary" type="submit" data-testid="submit" disabled={!canGenerate}>
-					{lists.length ? m.generate_refresh() : m.generate_button()}
-				</button>
-			</div>
-		</form>
+				<div class="actions">
+					<button class="button-primary" type="submit" data-testid="submit" disabled={!canGenerate}>
+						{lists.length ? m.generate_refresh() : m.generate_button()}
+					</button>
+				</div>
+			</form>
+		{/key}
 
 		{#if result && isEmpty}
 			<p class="notice partial" data-testid="empty-notice">

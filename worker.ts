@@ -8,8 +8,8 @@ import { purgeExpiredIdempotency } from './src/lib/server/material/idempotencyPu
  *
  * SvelteKit's adapter produces `_worker.js` — at the path `wrangler.svelte.jsonc`
  * names, never this one — and this file wraps it so the Worker can also answer
- * a cron. Everything the scheduled handler imports must be free of `$env` and
- * `$lib`: those are Vite's, and this file is bundled by wrangler.
+ * a cron. Everything the scheduled handler imports must be free of `$env`:
+ * it is Vite's, and this file is bundled by wrangler.
  */
 
 type Env = {

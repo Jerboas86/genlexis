@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { authorizeGeneration } from '$lib/server/generation/keys';
+import { authorizeGeneration } from '#lib/server/generation/keys.js';
 import {
 	createGeneration,
 	GenerationError,
 	parseGenerationRequest
-} from '$lib/server/generation/service';
+} from '#lib/server/generation/service.js';
 import type { RequestHandler } from './$types';
 
 const MAX_BODY_BYTES = 16_384;

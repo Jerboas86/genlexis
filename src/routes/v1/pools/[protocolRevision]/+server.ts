@@ -11,10 +11,10 @@
  */
 
 import { json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { verifyRequest } from '$lib/server/material/auth';
-import { describeProtocolPool, PoolError, type PoolErrorCode } from '$lib/server/material/pools';
-import { repository } from '$lib/server/genlexis/repository';
+import * as env from '$app/env/private';
+import { verifyRequest } from '#lib/server/material/auth.js';
+import { describeProtocolPool, PoolError, type PoolErrorCode } from '#lib/server/material/pools.js';
+import { repository } from '#lib/server/genlexis/repository.js';
 import type { RequestHandler } from './$types';
 
 const PROTOCOL_REVISION = /^[a-z0-9][a-z0-9._-]{0,62}[a-z0-9]$/;

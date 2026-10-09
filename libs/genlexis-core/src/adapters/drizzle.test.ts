@@ -144,6 +144,13 @@ describe('the drawable set', () => {
 		expect(sql).not.toContain('verb_token');
 		expect(sql).toContain('noun_le.pld20 <');
 	});
+
+	it('restricts an API random selection to its requested language', async () => {
+		const { repository, statements } = recording();
+		await repository.findRandomAcceptedItems({ pattern: 'noun', language: 'fr-FR', limit: 2 });
+		expect(statements[0]!.sql).toContain('s.language =');
+		expect(statements[0]!.params).toContain('fr-FR');
+	});
 });
 
 describe('findAcceptedItemsWithIpa', () => {

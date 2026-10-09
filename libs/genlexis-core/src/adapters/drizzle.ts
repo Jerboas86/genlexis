@@ -190,8 +190,8 @@ const drawableCandidates = (config: DrizzleRepositoryConfig, options: CandidateF
 };
 
 /**
- * The candidates of the unbalanced selection: no language or transcription
- * requirement, and pairs keyed on the noun alone unless the pattern has an
+ * The candidates of the unbalanced selection: no transcription requirement,
+ * optional language filtering, and pairs keyed on the noun unless the pattern has an
  * adjective. Older than the drawable set, and kept as it was.
  */
 const randomCandidates = (config: DrizzleRepositoryConfig, options: FindAcceptedItemsOptions) => {
@@ -201,6 +201,7 @@ const randomCandidates = (config: DrizzleRepositoryConfig, options: FindAccepted
 					${spec.hasAdj ? tokenJoin(config, 'adj', config.slots.adj, false) : sql``}`;
 	const where = sql`WHERE s.accepted = TRUE
 						AND s.pattern = ${options.pattern}
+						${options.language ? sql`AND s.language = ${options.language}` : sql``}
 						${nounPhraseFilters(options, spec, config.preset)}`;
 	return { from, where, dedupeExpr: dedupeFor(spec, false) };
 };
@@ -328,11 +329,11 @@ export const createDrizzleGenerationRepository = (
 						${dedupeExpr} AS "dedupeKey"
 					${from}
 					${where}
-					ORDER BY ${dedupeExpr}, ${innerOrder}
+					ORDER BY ${dedupeExpr}, ${innerOrder}, s.sentence_id
 				)
 				SELECT "sentenceId", sentence, pattern, "dedupeKey"
 				FROM candidates
-				ORDER BY ${outerOrder}
+				ORDER BY ${outerOrder}, "sentenceId"
 				LIMIT ${options.limit}
 			`);
 
@@ -362,11 +363,11 @@ export const createDrizzleGenerationRepository = (
 						${ipaSelect}
 					${from}
 					${where}
-					ORDER BY ${dedupeExpr}, ${innerOrder}
+					ORDER BY ${dedupeExpr}, ${innerOrder}, s.sentence_id
 				)
 				SELECT "sentenceId", sentence, pattern, "dedupeKey", "phonoIpa"${ipaPick}
 				FROM candidates
-				ORDER BY ${outerOrder}
+				ORDER BY ${outerOrder}, "sentenceId"
 				LIMIT ${options.poolSize}
 			`);
 

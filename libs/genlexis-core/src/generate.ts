@@ -71,6 +71,7 @@ export const generateAcceptedSentences = async (
 
 	const items = await repository.findRandomAcceptedItems({
 		pattern: options.pattern,
+		language: options.language,
 		detType: options.detType,
 		gender: options.gender,
 		grammNumber: options.grammNumber,

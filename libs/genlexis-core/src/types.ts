@@ -41,6 +41,7 @@ export type LexicalDensity = 'high' | 'medium' | 'low';
 
 export type GenerateOptions = {
 	pattern: SupportedPattern;
+	language?: string;
 	detType?: DetType;
 	gender?: Gender;
 	grammNumber?: GrammNumber;
@@ -61,6 +62,7 @@ export type GenerateResult = {
 
 export type FindAcceptedItemsOptions = {
 	pattern: SupportedPattern;
+	language?: string;
 	detType?: DetType;
 	gender?: Gender;
 	grammNumber?: GrammNumber;

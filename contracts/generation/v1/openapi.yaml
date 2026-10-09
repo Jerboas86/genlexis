@@ -14,15 +14,13 @@ paths:
       summary: Automatic list generation
       x-summary-fr: Génération automatique de listes
       description: |
-        Genlexis selects validated items from its corpus using the requested grammatical
-        pattern, quantity, and filters. Choose random selection or a mode that brings each
-        list closer to the French phoneme distribution. The response includes the resulting
-        lists and the applied settings.
+        Genlexis selects items from its corpus according to the requested parameters.
+        Choose a purely random selection or a phonemically balanced selection. The response
+        includes the resulting lists and the applied settings.
       x-description-fr: |
-        Genlexis sélectionne des éléments validés dans son corpus selon le patron grammatical,
-        la quantité et les filtres demandés. Choisissez un tirage aléatoire ou un mode qui
-        rapproche chaque liste de la distribution phonémique du français. La réponse contient
-        les listes obtenues et les paramètres appliqués.
+        Genlexis sélectionne des éléments dans son corpus en fonction des paramètres demandés.
+        Choisissez un tirage purement aléatoire ou un tirage équilibré phonémiquement.
+        La réponse contient les listes obtenues et les paramètres appliqués.
       security:
         - apiKey: []
       requestBody:
@@ -103,7 +101,7 @@ components:
           type: string
           enum: [random, phoneme_balanced]
           description: Selection mode, random or phoneme balanced.
-          x-description-fr: Mode de sélection, aléatoire ou équilibré sur les phonèmes.
+          x-description-fr: Mode de sélection, aléatoire ou avec équilibrage phonémique.
         language:
           type: string
           const: fr-FR

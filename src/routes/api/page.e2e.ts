@@ -30,16 +30,14 @@ test('the API reference lets a developer find an endpoint and copy its example',
 	await expect(
 		page.getByRole('heading', { name: 'Génération automatique de listes' })
 	).toBeVisible();
-	await expect(
-		page.getByText('Genlexis sélectionne des éléments validés dans son corpus')
-	).toBeVisible();
+	await expect(page.getByText('Genlexis sélectionne des éléments dans son corpus')).toBeVisible();
 	await page.getByRole('link', { name: /\/v1\/generations/ }).click();
 	const parameters = page.locator('section').filter({
 		has: page.getByRole('heading', { name: 'Paramètres' })
 	});
 	await expect(parameters.getByText('selection', { exact: true })).toBeVisible();
 	await expect(
-		parameters.getByText('Mode de sélection, aléatoire ou équilibré sur les phonèmes.')
+		parameters.getByText('Mode de sélection, aléatoire ou avec équilibrage phonémique.')
 	).toBeVisible();
 	await parameters.getByText('Voir les 6 champs').click();
 	await expect(parameters.getByText('detType', { exact: true })).toBeVisible();
@@ -83,7 +81,7 @@ test('the English route uses English documentation labels', async ({ page }) => 
 		.addCookies([{ name: 'PARAGLIDE_LOCALE', value: 'en', url: 'http://localhost:4173' }]);
 	await page.goto('http://localhost:4173/api');
 	await expect(page.getByRole('heading', { name: 'Automatic list generation' })).toBeVisible();
-	await expect(page.getByText('Genlexis selects validated items from its corpus')).toBeVisible();
+	await expect(page.getByText('Genlexis selects items from its corpus')).toBeVisible();
 	await expect(page.getByText('Selection mode, random or phoneme balanced.')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Phoneme balanced' })).toBeVisible();
 });

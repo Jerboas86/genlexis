@@ -47,6 +47,60 @@ const invalid = (message: string): never => {
 	throw new GenerationError('invalid_request', message);
 };
 
+function count(value: unknown, maximum: number, name: string): number {
+	if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > maximum)
+		return invalid(`${name} must be an integer from 1 to ${maximum}`);
+	return value as number;
+}
+
+function seed(value: unknown, newSeed: () => string): string {
+	if (value === undefined) return newSeed();
+	if (typeof value !== 'string' || value.length < 1 || value.length > 128 || value.trim() !== value)
+		return invalid('seed must be a nonempty string of at most 128 characters without outer spaces');
+	return value;
+}
+
+function validateFilterValues(filters: Record<string, unknown>): void {
+	if (!optional(filters.detType, ['definite', 'indefinite'])) invalid('Invalid detType');
+	if (!optional(filters.gender, ['m', 'f'])) invalid('Invalid gender');
+	if (!optional(filters.grammNumber, ['s', 'p'])) invalid('Invalid grammNumber');
+	if (!optional(filters.lexicalDensity, ['high', 'medium', 'low']))
+		invalid('Invalid lexicalDensity');
+	if (!optional(filters.lengthUnit, ['syllables', 'phonemes'])) invalid('Invalid lengthUnit');
+	if (
+		filters.length !== undefined &&
+		(!Number.isInteger(filters.length) ||
+			(filters.length as number) < 1 ||
+			(filters.length as number) > 20)
+	)
+		invalid('length must be an integer from 1 to 20');
+}
+
+function parseFilters(value: unknown, pattern: GenerateOptions['pattern']): Filters {
+	const filters = value ?? {};
+	if (
+		!object(filters) ||
+		!closed(filters, ['detType', 'gender', 'grammNumber', 'length', 'lengthUnit', 'lexicalDensity'])
+	)
+		return invalid('Invalid filters');
+	validateFilterValues(filters);
+	if (filters.lengthUnit !== undefined && filters.length === undefined)
+		return invalid('lengthUnit requires length');
+	if (filters.detType !== undefined && pattern === 'noun')
+		return invalid('detType requires a pattern with a determiner');
+	return {
+		detType: filters.detType as Filters['detType'],
+		gender: filters.gender as Filters['gender'],
+		grammNumber: filters.grammNumber as Filters['grammNumber'],
+		length: filters.length as number | undefined,
+		lengthUnit:
+			filters.length === undefined
+				? undefined
+				: ((filters.lengthUnit ?? 'syllables') as Filters['lengthUnit']),
+		lexicalDensity: filters.lexicalDensity as Filters['lexicalDensity']
+	};
+}
+
 export function parseGenerationRequest(
 	value: unknown,
 	newSeed: () => string = () => crypto.randomUUID()
@@ -72,76 +126,21 @@ export function parseGenerationRequest(
 		return invalid('language is required');
 	}
 	if (!oneOf(value.pattern, SUPPORTED_PATTERNS)) return invalid('Invalid pattern');
-	if (
-		!Number.isInteger(value.listCount) ||
-		(value.listCount as number) < 1 ||
-		(value.listCount as number) > 5
-	)
-		return invalid('listCount must be an integer from 1 to 5');
-	if (
-		!Number.isInteger(value.itemsPerList) ||
-		(value.itemsPerList as number) < 1 ||
-		(value.itemsPerList as number) > 50
-	)
-		return invalid('itemsPerList must be an integer from 1 to 50');
+	const listCount = count(value.listCount, 5, 'listCount');
+	const itemsPerList = count(value.itemsPerList, 50, 'itemsPerList');
 	if (value.allowPartial !== undefined && typeof value.allowPartial !== 'boolean')
 		return invalid('allowPartial must be a boolean');
-	if (
-		value.seed !== undefined &&
-		(typeof value.seed !== 'string' ||
-			value.seed.length < 1 ||
-			value.seed.length > 128 ||
-			value.seed.trim() !== value.seed)
-	)
-		return invalid('seed must be a nonempty string of at most 128 characters without outer spaces');
-	const rawFilters = value.filters ?? {};
-	if (
-		!object(rawFilters) ||
-		!closed(rawFilters, [
-			'detType',
-			'gender',
-			'grammNumber',
-			'length',
-			'lengthUnit',
-			'lexicalDensity'
-		])
-	)
-		return invalid('Invalid filters');
-	if (!optional(rawFilters.detType, ['definite', 'indefinite'])) return invalid('Invalid detType');
-	if (!optional(rawFilters.gender, ['m', 'f'])) return invalid('Invalid gender');
-	if (!optional(rawFilters.grammNumber, ['s', 'p'])) return invalid('Invalid grammNumber');
-	if (!optional(rawFilters.lexicalDensity, ['high', 'medium', 'low']))
-		return invalid('Invalid lexicalDensity');
-	if (!optional(rawFilters.lengthUnit, ['syllables', 'phonemes']))
-		return invalid('Invalid lengthUnit');
-	if (
-		rawFilters.length !== undefined &&
-		(!Number.isInteger(rawFilters.length) ||
-			(rawFilters.length as number) < 1 ||
-			(rawFilters.length as number) > 20)
-	)
-		return invalid('length must be an integer from 1 to 20');
-	if (rawFilters.lengthUnit !== undefined && rawFilters.length === undefined)
-		return invalid('lengthUnit requires length');
-	if (rawFilters.detType !== undefined && value.pattern === 'noun')
-		return invalid('detType requires a pattern with a determiner');
+	const requestSeed = seed(value.seed, newSeed);
+	const filters = parseFilters(value.filters, value.pattern);
 
 	return {
 		selection: value.selection,
 		language: 'fr-FR',
 		pattern: value.pattern,
-		listCount: value.listCount as number,
-		itemsPerList: value.itemsPerList as number,
-		filters: {
-			detType: rawFilters.detType,
-			gender: rawFilters.gender,
-			grammNumber: rawFilters.grammNumber,
-			length: rawFilters.length as number | undefined,
-			lengthUnit:
-				rawFilters.length === undefined ? undefined : (rawFilters.lengthUnit ?? 'syllables'),
-			lexicalDensity: rawFilters.lexicalDensity
-		},
-		seed: (value.seed as string | undefined) ?? newSeed(),
+		listCount,
+		itemsPerList,
+		filters,
+		seed: requestSeed,
 		allowPartial: (value.allowPartial as boolean | undefined) ?? false
 	};
 }

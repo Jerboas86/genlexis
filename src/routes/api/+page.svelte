@@ -5,7 +5,7 @@
 	import { localizeHref } from '$lib/paraglide/runtime';
 	import * as m from '$lib/paraglide/messages';
 	import type { PageData } from './$types';
-	import type { DocField } from './+page.server';
+	import type { DocEndpoint, DocExample, DocField } from './+page.server';
 
 	let { data }: { data: PageData } = $props();
 	let selectedId = $state('');
@@ -48,27 +48,33 @@
 			.join(' | ');
 	}
 
+	const bound = (value: number | undefined, fallback: string) =>
+		value === undefined ? fallback : String(value);
+
+	function rangeHint(field: DocField): string {
+		const { minimum, maximum } = field.constraints;
+		if (minimum === undefined && maximum === undefined) return '';
+		return m.api_range({ minimum: bound(minimum, '−∞'), maximum: bound(maximum, '+∞') });
+	}
+
+	function lengthHint(field: DocField): string {
+		const { minLength, maxLength } = field.constraints;
+		if (minLength === undefined && maxLength === undefined) return '';
+		return m.api_length({ minimum: bound(minLength, '0'), maximum: bound(maxLength, '∞') });
+	}
+
 	function fieldHelp(field: DocField): string {
-		const {
-			enum: values,
-			minimum,
-			maximum,
-			minLength,
-			maxLength,
-			default: defaultValue
-		} = field.constraints;
-		const parts = [field.name === 'scores' ? m.api_scores_description() : clean(field.description)];
-		if (values?.length) parts.push(values.join(' · '));
-		if (minimum !== undefined || maximum !== undefined)
-			parts.push(
-				m.api_range({ minimum: String(minimum ?? '−∞'), maximum: String(maximum ?? '+∞') })
-			);
-		if (minLength !== undefined || maxLength !== undefined)
-			parts.push(
-				m.api_length({ minimum: String(minLength ?? 0), maximum: String(maxLength ?? '∞') })
-			);
-		if (defaultValue !== undefined) parts.push(m.api_default({ value: defaultValue }));
-		return parts.filter(Boolean).join(' ');
+		return [
+			field.name === 'scores' ? m.api_scores_description() : clean(field.description),
+			field.constraints.enum?.join(' · '),
+			rangeHint(field),
+			lengthHint(field),
+			field.constraints.default === undefined
+				? ''
+				: m.api_default({ value: field.constraints.default })
+		]
+			.filter(Boolean)
+			.join(' ');
 	}
 
 	function select(id: string) {
@@ -101,26 +107,27 @@
 		resetCopy = setTimeout(() => (copied = null), 2000);
 	}
 
-	function tokenize(code: string, kind: 'curl' | 'json') {
-		const pattern =
-			kind === 'json'
-				? /("(?:\\.|[^"\\])*"|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?)/g
-				: /(\$[A-Z_]+|--?[A-Za-z][\w-]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
+	function tokenKind(value: string): string {
+		if (value.startsWith('$')) return 'variable';
+		return /^[-\d]/.test(value) ? 'number' : 'string';
+	}
+
+	function tokenize(code: string, pattern: RegExp) {
 		const parts: { text: string; kind: string }[] = [];
 		let previous = 0;
 		for (const match of code.matchAll(pattern)) {
-			const index = match.index ?? 0;
+			const index = match.index;
 			if (index > previous) parts.push({ text: code.slice(previous, index), kind: 'plain' });
 			const value = match[0];
-			parts.push({
-				text: value,
-				kind: value.startsWith('$') ? 'variable' : /^[-\d]/.test(value) ? 'number' : 'string'
-			});
+			parts.push({ text: value, kind: tokenKind(value) });
 			previous = index + value.length;
 		}
 		if (previous < code.length) parts.push({ text: code.slice(previous), kind: 'plain' });
 		return parts;
 	}
+
+	const JSON_TOKENS = /("(?:\\.|[^"\\])*"|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?)/g;
+	const CURL_TOKENS = /(\$[A-Z_]+|--?[A-Za-z][\w-]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g;
 
 	const clean = (value: string) => value.replaceAll('**', '').replaceAll('`', '');
 </script>
@@ -138,13 +145,130 @@
 			</button>
 		</div>
 		<pre><code
-				>{#each tokenize(content, kind) as token, index (index)}<span
+				>{#each tokenize(content, kind === 'json' ? JSON_TOKENS : CURL_TOKENS) as token, index (index)}<span
 						class:syntax-string={token.kind === 'string'}
 						class:syntax-number={token.kind === 'number'}
 						class:syntax-variable={token.kind === 'variable'}>{token.text}</span
 					>{/each}</code
 			></pre>
 	</div>
+{/snippet}
+
+{#snippet fieldContent(field: DocField)}
+	<div class="field-line">
+		<code>{field.name}</code><span class="field-type">{formatType(field.type)}</span><span
+			class:required={field.required}
+			class="field-required">{field.required ? m.api_required() : m.api_optional()}</span
+		>
+	</div>
+	{#if fieldHelp(field)}<p>{fieldHelp(field)}</p>{/if}
+{/snippet}
+
+{#snippet parameterSection(endpoint: DocEndpoint)}
+	<section>
+		<h3>{m.api_parameters_title()}</h3>
+		{#if endpoint.parameters.length === 0}<p>{m.api_no_parameters()}</p>{/if}
+		{#each endpoint.parameters as parameter (parameter.name)}
+			<div class="field">
+				{@render fieldContent(parameter)}
+				{#if parameter.children.length}
+					<details class="nested">
+						<summary>{m.api_nested_fields({ count: parameter.children.length })}</summary>
+						{#each parameter.children as child (child.name)}
+							<div class="field child">
+								{@render fieldContent(child)}
+							</div>
+						{/each}
+					</details>
+				{/if}
+			</div>
+		{/each}
+	</section>
+{/snippet}
+
+{#snippet responseSection(endpoint: DocEndpoint)}
+	<section>
+		<h3>{m.api_response_title()}</h3>
+		{#each endpoint.responseFields as field (field.name)}
+			<div class="field">
+				{@render fieldContent(field)}
+			</div>
+		{/each}
+	</section>
+{/snippet}
+
+{#snippet endpointArticle(endpoint: DocEndpoint)}
+	<article id="endpoint-content" class="content">
+		<div class="eyebrow">
+			<span>{resourceLabel(endpoint.resource)}</span>
+		</div>
+		<h2>{m.api_generation_endpoint_title()}</h2>
+		<div class="route-line">
+			<span class:post={endpoint.method === 'POST'} class="method">{endpoint.method}</span><code
+				>{endpoint.server}{endpoint.path}</code
+			>
+		</div>
+		<p class="description">{m.api_generation_endpoint_description()}</p>
+
+		<section>
+			<h3>{m.api_authentication_title()}</h3>
+			<p class="security">{m.api_generation_auth_description()}</p>
+			<div class="key-example">
+				<span>{m.api_key_example_label()}</span>
+				<code>glx_0123456789...abcdef</code>
+			</div>
+			<a class="access-link" href="mailto:benoitdelemps@protonmail.com?subject=Genlexis%20API"
+				>{m.api_access_cta()}</a
+			>
+		</section>
+
+		{@render parameterSection(endpoint)}
+
+		{@render responseSection(endpoint)}
+
+		<section>
+			<h3>{m.api_errors_title()}</h3>
+			{#each endpoint.responses as response (response.status)}
+				<div class="status-row">
+					<code class:success={response.status === '200'}>{response.status}</code><span
+						>{response.status === '200'
+							? m.api_generation_success_description()
+							: m.api_generation_error_description()}</span
+					>
+				</div>
+			{/each}
+		</section>
+	</article>
+{/snippet}
+
+{#snippet examplesPanel(endpoint: DocEndpoint, example: DocExample | undefined)}
+	<aside class="examples" aria-label={m.api_examples_title()}>
+		<div class="examples-head">
+			<strong>{m.api_examples_title()}</strong>{#if endpoint.examples.length > 1}<div
+					class="example-tabs"
+				>
+					{#each endpoint.examples as choice (choice.label)}<button
+							type="button"
+							class:chosen={example?.label === choice.label}
+							onclick={() => (selectedExample = choice.label)}>{exampleLabel(choice.label)}</button
+						>{/each}
+				</div>{/if}
+		</div>
+		{#if example}
+			{@render codePanel(
+				m.api_request_title(),
+				example.request,
+				'curl',
+				`${endpoint.id}-${example.label}-request`
+			)}
+			{@render codePanel(
+				m.api_response_example_title(),
+				example.response,
+				'json',
+				`${endpoint.id}-${example.label}-response`
+			)}
+		{/if}
+	</aside>
 {/snippet}
 
 <svelte:head>
@@ -187,121 +311,8 @@
 		</aside>
 
 		{#if endpoint}
-			<article id="endpoint-content" class="content">
-				<div class="eyebrow">
-					<span>{resourceLabel(endpoint.resource)}</span>
-				</div>
-				<h2>{m.api_generation_endpoint_title()}</h2>
-				<div class="route-line">
-					<span class:post={endpoint.method === 'POST'} class="method">{endpoint.method}</span><code
-						>{endpoint.server}{endpoint.path}</code
-					>
-				</div>
-				<p class="description">{m.api_generation_endpoint_description()}</p>
-
-				<section>
-					<h3>{m.api_authentication_title()}</h3>
-					<p class="security">{m.api_generation_auth_description()}</p>
-					<div class="key-example">
-						<span>{m.api_key_example_label()}</span>
-						<code>glx_0123456789...abcdef</code>
-					</div>
-					<a class="access-link" href="mailto:benoitdelemps@protonmail.com?subject=Genlexis%20API"
-						>{m.api_access_cta()}</a
-					>
-				</section>
-
-				<section>
-					<h3>{m.api_parameters_title()}</h3>
-					{#if endpoint.parameters.length === 0}<p>{m.api_no_parameters()}</p>{/if}
-					{#each endpoint.parameters as parameter (parameter.name)}
-						<div class="field">
-							<div class="field-line">
-								<code>{parameter.name}</code><span class="field-type"
-									>{formatType(parameter.type)}</span
-								><span class:required={parameter.required} class="field-required"
-									>{parameter.required ? m.api_required() : m.api_optional()}</span
-								>
-							</div>
-							{#if fieldHelp(parameter)}<p>{fieldHelp(parameter)}</p>{/if}
-							{#if parameter.children.length}
-								<details class="nested">
-									<summary>{m.api_nested_fields({ count: parameter.children.length })}</summary>
-									{#each parameter.children as child (child.name)}
-										<div class="field child">
-											<div class="field-line">
-												<code>{child.name}</code><span class="field-type"
-													>{formatType(child.type)}</span
-												><span class:required={child.required} class="field-required"
-													>{child.required ? m.api_required() : m.api_optional()}</span
-												>
-											</div>
-											{#if fieldHelp(child)}<p>{fieldHelp(child)}</p>{/if}
-										</div>
-									{/each}
-								</details>
-							{/if}
-						</div>
-					{/each}
-				</section>
-
-				<section>
-					<h3>{m.api_response_title()}</h3>
-					{#each endpoint.responseFields as field (field.name)}
-						<div class="field">
-							<div class="field-line">
-								<code>{field.name}</code><span class="field-type">{formatType(field.type)}</span
-								><span class:required={field.required} class="field-required"
-									>{field.required ? m.api_required() : m.api_optional()}</span
-								>
-							</div>
-							{#if fieldHelp(field)}<p>{fieldHelp(field)}</p>{/if}
-						</div>
-					{/each}
-				</section>
-
-				<section>
-					<h3>{m.api_errors_title()}</h3>
-					{#each endpoint.responses as response (response.status)}
-						<div class="status-row">
-							<code class:success={response.status === '200'}>{response.status}</code><span
-								>{response.status === '200'
-									? m.api_generation_success_description()
-									: m.api_generation_error_description()}</span
-							>
-						</div>
-					{/each}
-				</section>
-			</article>
-
-			<aside class="examples" aria-label={m.api_examples_title()}>
-				<div class="examples-head">
-					<strong>{m.api_examples_title()}</strong>{#if endpoint.examples.length > 1}<div
-							class="example-tabs"
-						>
-							{#each endpoint.examples as choice (choice.label)}<button
-									type="button"
-									class:chosen={example?.label === choice.label}
-									onclick={() => (selectedExample = choice.label)}
-									>{exampleLabel(choice.label)}</button
-								>{/each}
-						</div>{/if}
-				</div>
-				{#if example}
-					{@render codePanel(
-						m.api_request_title(),
-						example.request,
-						'curl',
-						`${endpoint.id}-${example.label}-request`
-					)}
-					{@render codePanel(
-						m.api_response_example_title(),
-						example.response,
-						'json',
-						`${endpoint.id}-${example.label}-response`
-					)}
-				{/if}
-			</aside>
+			{@render endpointArticle(endpoint)}
+			{@render examplesPanel(endpoint, example)}
 		{/if}
 	</main>
 </div>

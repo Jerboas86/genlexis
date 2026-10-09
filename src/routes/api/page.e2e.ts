@@ -1,3 +1,4 @@
+// fallow-ignore-file unused-file -- Playwright discovers this route test by filename.
 import { expect, test } from '@playwright/test';
 
 test('the API reference lets a developer find an endpoint and copy its example', async ({

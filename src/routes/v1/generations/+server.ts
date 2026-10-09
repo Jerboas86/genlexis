@@ -32,7 +32,7 @@ function failure(status: number, code: string, message: string): Response {
 	return json({ error: { code, message } }, { status, headers: HEADERS });
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+async function checkAccess(request: Request): Promise<Response | null> {
 	let access: Awaited<ReturnType<typeof authorizeGeneration>>;
 	try {
 		access = await authorizeGeneration(request.headers);
@@ -48,6 +48,28 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (access === 'unauthorized') return failure(401, 'unauthorized', 'A valid API key is required');
 	if (access === 'forbidden')
 		return failure(403, 'forbidden', 'This key cannot create generations');
+	return null;
+}
+
+function generationFailure(cause: unknown): Response {
+	if (cause instanceof GenerationError) {
+		const status =
+			cause.code === 'insufficient_material' || cause.code === 'corpus_unavailable' ? 422 : 400;
+		return failure(status, cause.code, cause.message);
+	}
+	if (cause instanceof SyntaxError) return failure(400, 'invalid_request', 'Invalid JSON');
+	console.error(
+		JSON.stringify({
+			event: 'generation_failed',
+			name: cause instanceof Error ? cause.name : 'unknown'
+		})
+	);
+	return failure(503, 'service_unavailable', 'Service unavailable');
+}
+
+export const POST: RequestHandler = async ({ request }) => {
+	const accessFailure = await checkAccess(request);
+	if (accessFailure) return accessFailure;
 	if (
 		request.headers.get('Content-Type')?.split(';')[0]?.trim().toLowerCase() !== 'application/json'
 	)
@@ -68,18 +90,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		);
 		return json(result, { headers: HEADERS });
 	} catch (cause) {
-		if (cause instanceof GenerationError) {
-			const status =
-				cause.code === 'insufficient_material' || cause.code === 'corpus_unavailable' ? 422 : 400;
-			return failure(status, cause.code, cause.message);
-		}
-		if (cause instanceof SyntaxError) return failure(400, 'invalid_request', 'Invalid JSON');
-		console.error(
-			JSON.stringify({
-				event: 'generation_failed',
-				name: cause instanceof Error ? cause.name : 'unknown'
-			})
-		);
-		return failure(503, 'service_unavailable', 'Service unavailable');
+		return generationFailure(cause);
 	}
 };

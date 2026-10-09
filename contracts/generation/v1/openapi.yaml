@@ -1,0 +1,129 @@
+openapi: 3.1.0
+info:
+  title: Genlexis generation API
+  version: 1.0.0
+  description: Private lexical generation for research scripts and server applications.
+  contact:
+    email: benoitdelemps@protonmail.com
+servers:
+  - url: https://genlexis.com
+paths:
+  /v1/generations:
+    post:
+      operationId: createGeneration
+      summary: Generate accepted French sentence lists.
+      description: |
+        A seed reproduces the result only while the corpus and generation rules are unchanged.
+        No generation result is stored. The request is refused if it cannot be filled, unless
+        allowPartial is true. An empty result is always refused.
+      security:
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GenerationRequest' }
+      responses:
+        '200':
+          description: Complete or explicitly permitted partial generation.
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GenerationResponse' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    apiKey:
+      type: http
+      scheme: bearer
+      description: A manually issued, individually revocable API key. Use only in scripts and servers.
+  responses:
+    Error:
+      description: A stable machine code with an explanatory message.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Filters:
+      type: object
+      additionalProperties: false
+      properties:
+        detType: { type: string, enum: [definite, indefinite] }
+        gender: { type: string, enum: [m, f] }
+        grammNumber: { type: string, enum: [s, p] }
+        length: { type: integer, minimum: 1, maximum: 20 }
+        lengthUnit: { type: string, enum: [syllables, phonemes] }
+        lexicalDensity: { type: string, enum: [high, medium, low] }
+    GenerationRequest:
+      type: object
+      additionalProperties: false
+      required: [selection, language, pattern, listCount, itemsPerList]
+      properties:
+        selection: { type: string, enum: [random, phoneme_balanced] }
+        language: { type: string, const: fr-FR }
+        pattern: { type: string, enum: [noun, det_noun, det_noun_adj, np_verb] }
+        listCount: { type: integer, minimum: 1, maximum: 5 }
+        itemsPerList: { type: integer, minimum: 1, maximum: 50 }
+        filters: { $ref: '#/components/schemas/Filters' }
+        seed: { type: string, minLength: 1, maxLength: 128 }
+        allowPartial: { type: boolean, default: false }
+    Sentence:
+      type: object
+      additionalProperties: false
+      required: [sentenceId, sentence, pattern]
+      properties:
+        sentenceId: { type: integer, minimum: 1 }
+        sentence: { type: string }
+        pattern: { type: string }
+    AppliedOptions:
+      type: object
+      additionalProperties: false
+      required: [pattern, listCount, itemsPerList, filters, allowPartial]
+      properties:
+        pattern: { type: string }
+        listCount: { type: integer }
+        itemsPerList: { type: integer }
+        filters: { $ref: '#/components/schemas/Filters' }
+        allowPartial: { type: boolean }
+    GenerationResponse:
+      type: object
+      additionalProperties: false
+      required: [selection, language, seed, options, lists, requestedItems, totalItems, complete]
+      properties:
+        selection: { type: string, enum: [random, phoneme_balanced] }
+        language: { type: string, const: fr-FR }
+        seed: { type: string }
+        options: { $ref: '#/components/schemas/AppliedOptions' }
+        lists:
+          type: array
+          items:
+            type: array
+            items: { $ref: '#/components/schemas/Sentence' }
+        requestedItems: { type: integer, minimum: 1 }
+        totalItems: { type: integer, minimum: 1 }
+        complete: { type: boolean }
+        scores:
+          type: array
+          description: Per-list phoneme distance, present only in phoneme_balanced mode.
+          items: { type: number, minimum: 0 }
+        aggregateScore: { type: number, minimum: 0 }
+        poolSize: { type: integer, minimum: 0 }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [invalid_request, unsupported_language, unauthorized, forbidden, insufficient_material, corpus_unavailable, service_unavailable]
+            message: { type: string }

@@ -40,7 +40,9 @@
 		"db:migrate:dev": "doppler run -p genlexis -c dev -- pnpm db:migrate",
 		"db:migrate:prod": "doppler run -p genlexis -c prod -- pnpm db:migrate",
 		"db:studio": "drizzle-kit studio",
-		"db:studio:dev": "doppler run -p genlexis -c dev -- pnpm db:studio"
+		"db:studio:dev": "doppler run -p genlexis -c dev -- pnpm db:studio",
+		"api:keys:dev": "doppler run -p genlexis -c dev -- node scripts/api-keys.mjs",
+		"api:keys:prod": "doppler run -p genlexis -c prod -- node scripts/api-keys.mjs"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.1.1",

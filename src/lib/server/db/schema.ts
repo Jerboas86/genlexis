@@ -25,6 +25,20 @@ import {
  */
 export const genlexis = pgSchema('genlexis');
 
+/** Independently revocable credentials for the external generation API. */
+export const generationApiKeys = genlexis.table(
+	'generation_api_keys',
+	{
+		id: text('id').primaryKey(),
+		clientName: text('client_name').notNull(),
+		secretHash: text('secret_hash').notNull(),
+		canGenerate: boolean('can_generate').notNull().default(true),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		revokedAt: timestamp('revoked_at', { withTimezone: true })
+	},
+	(t) => [unique('generation_api_keys_secret_hash_unique').on(t.secretHash)]
+);
+
 /**
  * The language of a corpus row.
  *

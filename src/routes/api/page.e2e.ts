@@ -8,6 +8,9 @@ test('the API reference lets a developer find an endpoint and copy its example',
 	await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
 	await page.goto('http://localhost:4173/api');
 	await expect(page.getByRole('heading', { name: 'API de génération' })).toBeVisible();
+	await expect(
+		page.getByText('Générez des listes de phrases ou de mots de manière automatique.')
+	).toBeVisible();
 	const authentication = page.locator('section').filter({
 		has: page.getByRole('heading', { name: 'Authentification' })
 	});
@@ -25,12 +28,30 @@ test('the API reference lets a developer find an endpoint and copy its example',
 	await expect(page.getByText('/v1/pools/{protocolRevision}')).toHaveCount(0);
 	await expect(page.getByRole('searchbox')).toHaveCount(0);
 	await expect(
-		page.getByRole('heading', { name: 'Générer des listes de phrases françaises acceptées' })
+		page.getByRole('heading', { name: 'Génération automatique de listes' })
+	).toBeVisible();
+	await expect(
+		page.getByText('Genlexis sélectionne des éléments validés dans son corpus')
 	).toBeVisible();
 	await page.getByRole('link', { name: /\/v1\/generations/ }).click();
-	await expect(page.getByText('selection', { exact: true }).first()).toBeVisible();
-	await page.getByText('Voir les 6 champs').click();
-	await expect(page.getByText('detType', { exact: true })).toBeVisible();
+	const parameters = page.locator('section').filter({
+		has: page.getByRole('heading', { name: 'Paramètres' })
+	});
+	await expect(parameters.getByText('selection', { exact: true })).toBeVisible();
+	await expect(
+		parameters.getByText('Mode de sélection, aléatoire ou équilibré sur les phonèmes.')
+	).toBeVisible();
+	await parameters.getByText('Voir les 6 champs').click();
+	await expect(parameters.getByText('detType', { exact: true })).toBeVisible();
+	await expect(
+		parameters.getByText('Type de déterminant ; réservé aux patrons avec déterminant.')
+	).toBeVisible();
+	const response = page.locator('section').filter({
+		has: page.getByRole('heading', { name: 'Réponse' })
+	});
+	await expect(response.getByText(/Listes produites ; chaque élément contient/)).toBeVisible();
+	await response.getByText('Voir les 5 champs').click();
+	await expect(response.getByText('Patron grammatical appliqué.')).toBeVisible();
 	await page.getByRole('button', { name: 'Équilibrage phonémique' }).click();
 	await page.getByRole('button', { name: 'Copier Requête cURL' }).click();
 	await expect(page.getByRole('button', { name: 'Copié Requête cURL' })).toBeVisible();
@@ -40,13 +61,16 @@ test('the API reference lets a developer find an endpoint and copy its example',
 	const spec = await request.get('http://localhost:4173/api/openapi.yaml');
 	expect(spec.ok()).toBe(true);
 	expect(await spec.text()).toContain('/v1/generations:');
+	expect(await spec.text()).toContain('x-description-fr:');
 });
 
 test('the API reference remains readable on a narrow screen', async ({ page }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
 	await page.goto('http://localhost:4173/api');
 	await expect(page.getByRole('link', { name: /\/v1\/generations/ })).toBeVisible();
-	await expect(page.getByRole('heading', { name: /Générer des listes de phrases/ })).toBeVisible();
+	await expect(
+		page.getByRole('heading', { name: 'Génération automatique de listes' })
+	).toBeVisible();
 	await expect(page.getByText('Requête cURL')).toBeVisible();
 	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
 		true
@@ -58,9 +82,8 @@ test('the English route uses English documentation labels', async ({ page }) => 
 		.context()
 		.addCookies([{ name: 'PARAGLIDE_LOCALE', value: 'en', url: 'http://localhost:4173' }]);
 	await page.goto('http://localhost:4173/api');
-	await expect(
-		page.getByRole('heading', { name: 'Generate accepted French sentence lists' })
-	).toBeVisible();
-	await expect(page.getByText('A seed reproduces the result only')).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Automatic list generation' })).toBeVisible();
+	await expect(page.getByText('Genlexis selects validated items from its corpus')).toBeVisible();
+	await expect(page.getByText('Selection mode, random or phoneme balanced.')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Phoneme balanced' })).toBeVisible();
 });

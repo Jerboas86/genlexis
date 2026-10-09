@@ -2,10 +2,10 @@
 	import type { Pathname } from '$app/types';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
-	import { localizeHref } from '$lib/paraglide/runtime';
+	import { getLocale, localizeHref } from '$lib/paraglide/runtime';
 	import * as m from '$lib/paraglide/messages';
 	import type { PageData } from './$types';
-	import type { DocEndpoint, DocExample, DocField } from './+page.server';
+	import type { DocEndpoint, DocExample, DocField, LocalizedText } from './+page.server';
 
 	let { data }: { data: PageData } = $props();
 	let selectedId = $state('');
@@ -23,6 +23,8 @@
 		if (resource === 'generations') return m.api_resource_generations();
 		return resource;
 	}
+
+	const localizeText = (value: LocalizedText) => (getLocale() === 'en' ? value.en : value.fr);
 
 	function exampleLabel(label: string) {
 		if (label === 'random') return m.api_example_random();
@@ -65,7 +67,7 @@
 
 	function fieldHelp(field: DocField): string {
 		return [
-			field.name === 'scores' ? m.api_scores_description() : clean(field.description),
+			clean(localizeText(field.description)),
 			field.constraints.enum?.join(' · '),
 			rangeHint(field),
 			lengthHint(field),
@@ -164,6 +166,20 @@
 	{#if fieldHelp(field)}<p>{fieldHelp(field)}</p>{/if}
 {/snippet}
 
+{#snippet nestedFields(field: DocField)}
+	{#if field.children.length}
+		<details class="nested">
+			<summary>{m.api_nested_fields({ count: field.children.length })}</summary>
+			{#each field.children as child (child.name)}
+				<div class="field child">
+					{@render fieldContent(child)}
+					{@render nestedFields(child)}
+				</div>
+			{/each}
+		</details>
+	{/if}
+{/snippet}
+
 {#snippet parameterSection(endpoint: DocEndpoint)}
 	<section>
 		<h3>{m.api_parameters_title()}</h3>
@@ -171,16 +187,7 @@
 		{#each endpoint.parameters as parameter (parameter.name)}
 			<div class="field">
 				{@render fieldContent(parameter)}
-				{#if parameter.children.length}
-					<details class="nested">
-						<summary>{m.api_nested_fields({ count: parameter.children.length })}</summary>
-						{#each parameter.children as child (child.name)}
-							<div class="field child">
-								{@render fieldContent(child)}
-							</div>
-						{/each}
-					</details>
-				{/if}
+				{@render nestedFields(parameter)}
 			</div>
 		{/each}
 	</section>
@@ -192,6 +199,7 @@
 		{#each endpoint.responseFields as field (field.name)}
 			<div class="field">
 				{@render fieldContent(field)}
+				{@render nestedFields(field)}
 			</div>
 		{/each}
 	</section>
@@ -202,17 +210,17 @@
 		<div class="eyebrow">
 			<span>{resourceLabel(endpoint.resource)}</span>
 		</div>
-		<h2>{m.api_generation_endpoint_title()}</h2>
+		<h2>{localizeText(endpoint.title)}</h2>
 		<div class="route-line">
 			<span class:post={endpoint.method === 'POST'} class="method">{endpoint.method}</span><code
 				>{endpoint.server}{endpoint.path}</code
 			>
 		</div>
-		<p class="description">{m.api_generation_endpoint_description()}</p>
+		<p class="description">{localizeText(endpoint.description)}</p>
 
 		<section>
 			<h3>{m.api_authentication_title()}</h3>
-			<p class="security">{m.api_generation_auth_description()}</p>
+			<p class="security">{localizeText(endpoint.security)}</p>
 			<div class="key-example">
 				<span>{m.api_key_example_label()}</span>
 				<code>glx_0123456789...abcdef</code>
@@ -231,9 +239,7 @@
 			{#each endpoint.responses as response (response.status)}
 				<div class="status-row">
 					<code class:success={response.status === '200'}>{response.status}</code><span
-						>{response.status === '200'
-							? m.api_generation_success_description()
-							: m.api_generation_error_description()}</span
+						>{localizeText(response.description)}</span
 					>
 				</div>
 			{/each}

@@ -17,11 +17,18 @@ describe('API reference data', () => {
 			endpoints: import('./+page.server').DocEndpoint[];
 		};
 		const generation = endpoints[0];
+		expect(generation.title.fr).toBe('Génération automatique de listes');
 		expect(generation.parameters.find(({ name }) => name === 'selection')).toMatchObject({
 			required: true,
 			constraints: { enum: ['random', 'phoneme_balanced'] }
 		});
 		expect(generation.parameters.find(({ name }) => name === 'filters')?.children).toHaveLength(6);
+		const described = (fields: import('./+page.server').DocField[]): boolean =>
+			fields.every(
+				(field) => field.description.en && field.description.fr && described(field.children)
+			);
+		expect(described(generation.parameters)).toBe(true);
+		expect(described(generation.responseFields)).toBe(true);
 		for (const example of generation.examples) {
 			const response = JSON.parse(example.response);
 			expect(response.selection).toBe(example.label);

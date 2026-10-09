@@ -11,11 +11,18 @@ paths:
   /v1/generations:
     post:
       operationId: createGeneration
-      summary: Generate accepted French sentence lists.
+      summary: Automatic list generation
+      x-summary-fr: Génération automatique de listes
       description: |
-        A seed reproduces the result only while the corpus and generation rules are unchanged.
-        No generation result is stored. The request is refused if it cannot be filled, unless
-        allowPartial is true. An empty result is always refused.
+        Genlexis selects validated items from its corpus using the requested grammatical
+        pattern, quantity, and filters. Choose random selection or a mode that brings each
+        list closer to the French phoneme distribution. The response includes the resulting
+        lists and the applied settings.
+      x-description-fr: |
+        Genlexis sélectionne des éléments validés dans son corpus selon le patron grammatical,
+        la quantité et les filtres demandés. Choisissez un tirage aléatoire ou un mode qui
+        rapproche chaque liste de la distribution phonémique du français. La réponse contient
+        les listes obtenues et les paramètres appliqués.
       security:
         - apiKey: []
       requestBody:
@@ -26,6 +33,7 @@ paths:
       responses:
         '200':
           description: Complete or explicitly permitted partial generation.
+          x-description-fr: Génération complète ou résultat partiel explicitement autorisé.
           headers:
             Cache-Control: { schema: { type: string, const: no-store } }
           content:
@@ -41,10 +49,12 @@ components:
     apiKey:
       type: http
       scheme: bearer
-      description: A manually issued, individually revocable API key. Use only in scripts and servers.
+      description: An API key is required. It is issued by the Genlexis team.
+      x-description-fr: Une clé API est requise. Elle est attribuée par l'équipe Genlexis.
   responses:
     Error:
       description: A stable machine code with an explanatory message.
+      x-description-fr: Code d'erreur stable accompagné d'un message explicatif.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -53,66 +63,186 @@ components:
       type: object
       additionalProperties: false
       properties:
-        detType: { type: string, enum: [definite, indefinite] }
-        gender: { type: string, enum: [m, f] }
-        grammNumber: { type: string, enum: [s, p] }
-        length: { type: integer, minimum: 1, maximum: 20 }
-        lengthUnit: { type: string, enum: [syllables, phonemes] }
-        lexicalDensity: { type: string, enum: [high, medium, low] }
+        detType:
+          type: string
+          enum: [definite, indefinite]
+          description: Determiner type; only for patterns with a determiner.
+          x-description-fr: Type de déterminant ; réservé aux patrons avec déterminant.
+        gender:
+          type: string
+          enum: [m, f]
+          description: Grammatical gender of the noun.
+          x-description-fr: Genre grammatical du nom.
+        grammNumber:
+          type: string
+          enum: [s, p]
+          description: Grammatical number of the noun.
+          x-description-fr: Nombre grammatical du nom.
+        length:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: Exact noun length in the selected unit.
+          x-description-fr: Longueur exacte du nom dans l'unité choisie.
+        lengthUnit:
+          type: string
+          enum: [syllables, phonemes]
+          description: Length unit; requires length. Defaults to syllables when length is set.
+          x-description-fr: Unité de longueur ; nécessite length. Par défaut, syllabes.
+        lexicalDensity:
+          type: string
+          enum: [high, medium, low]
+          description: Requested lexical density band for the noun.
+          x-description-fr: Niveau de densité lexicale demandé pour le nom.
     GenerationRequest:
       type: object
       additionalProperties: false
       required: [selection, language, pattern, listCount, itemsPerList]
       properties:
-        selection: { type: string, enum: [random, phoneme_balanced] }
-        language: { type: string, const: fr-FR }
-        pattern: { type: string, enum: [noun, det_noun, det_noun_adj, np_verb] }
-        listCount: { type: integer, minimum: 1, maximum: 5 }
-        itemsPerList: { type: integer, minimum: 1, maximum: 50 }
-        filters: { $ref: '#/components/schemas/Filters' }
-        seed: { type: string, minLength: 1, maxLength: 128 }
-        allowPartial: { type: boolean, default: false }
+        selection:
+          type: string
+          enum: [random, phoneme_balanced]
+          description: Selection mode, random or phoneme balanced.
+          x-description-fr: Mode de sélection, aléatoire ou équilibré sur les phonèmes.
+        language:
+          type: string
+          const: fr-FR
+          description: Corpus language; only fr-FR is currently supported.
+          x-description-fr: Langue du corpus ; seule fr-FR est disponible actuellement.
+        pattern:
+          type: string
+          enum: [noun, det_noun, det_noun_adj, np_verb]
+          description: Grammatical pattern of the items to select.
+          x-description-fr: Patron grammatical des éléments à sélectionner.
+        listCount:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Number of lists to produce.
+          x-description-fr: Nombre de listes à produire.
+        itemsPerList:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Requested number of items in each list.
+          x-description-fr: Nombre d'éléments souhaité dans chaque liste.
+        filters:
+          $ref: '#/components/schemas/Filters'
+          description: Optional constraints applied to corpus items.
+          x-description-fr: Contraintes facultatives appliquées aux éléments du corpus.
+        seed:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Reproducible seed; generated if omitted. Results remain reproducible while the corpus and rules remain unchanged.
+          x-description-fr: Graine de tirage ; créée si elle est omise. Le résultat reste reproductible tant que le corpus et les règles ne changent pas.
+        allowPartial:
+          type: boolean
+          default: false
+          description: Return available items when the request cannot be filled completely; an empty result is still refused.
+          x-description-fr: Autorise le retour des éléments disponibles si la demande ne peut pas être remplie ; un résultat vide reste refusé.
     Sentence:
       type: object
       additionalProperties: false
       required: [sentenceId, sentence, pattern]
       properties:
-        sentenceId: { type: integer, minimum: 1 }
-        sentence: { type: string }
-        pattern: { type: string }
+        sentenceId:
+          type: integer
+          minimum: 1
+          description: Identifier of the validated corpus item.
+          x-description-fr: Identifiant de l'élément validé dans le corpus.
+        sentence:
+          type: string
+          description: Text of the selected word or sentence.
+          x-description-fr: Texte du mot ou de la phrase sélectionné.
+        pattern:
+          type: string
+          description: Grammatical pattern of this item.
+          x-description-fr: Patron grammatical de cet élément.
     AppliedOptions:
       type: object
       additionalProperties: false
       required: [pattern, listCount, itemsPerList, filters, allowPartial]
       properties:
-        pattern: { type: string }
-        listCount: { type: integer }
-        itemsPerList: { type: integer }
-        filters: { $ref: '#/components/schemas/Filters' }
-        allowPartial: { type: boolean }
+        pattern:
+          type: string
+          description: Applied grammatical pattern.
+          x-description-fr: Patron grammatical appliqué.
+        listCount:
+          type: integer
+          description: Requested number of lists.
+          x-description-fr: Nombre de listes demandé.
+        itemsPerList:
+          type: integer
+          description: Requested number of items per list.
+          x-description-fr: Nombre d'éléments demandé par liste.
+        filters:
+          $ref: '#/components/schemas/Filters'
+          description: Applied filters.
+          x-description-fr: Filtres appliqués.
+        allowPartial:
+          type: boolean
+          description: Whether partial results were allowed.
+          x-description-fr: Indique si les résultats partiels étaient autorisés.
     GenerationResponse:
       type: object
       additionalProperties: false
       required: [selection, language, seed, options, lists, requestedItems, totalItems, complete]
       properties:
-        selection: { type: string, enum: [random, phoneme_balanced] }
-        language: { type: string, const: fr-FR }
-        seed: { type: string }
-        options: { $ref: '#/components/schemas/AppliedOptions' }
+        selection:
+          type: string
+          enum: [random, phoneme_balanced]
+          description: Selection mode used for this result.
+          x-description-fr: Mode de sélection utilisé pour ce résultat.
+        language:
+          type: string
+          const: fr-FR
+          description: Language of the selected items.
+          x-description-fr: Langue des éléments sélectionnés.
+        seed:
+          type: string
+          description: Seed actually used for this generation.
+          x-description-fr: Graine effectivement utilisée pour cette génération.
+        options:
+          $ref: '#/components/schemas/AppliedOptions'
+          description: Settings applied to this generation.
+          x-description-fr: Paramètres appliqués à cette génération.
         lists:
           type: array
+          description: Produced lists; each item contains an identifier, text, and grammatical pattern.
+          x-description-fr: Listes produites ; chaque élément contient un identifiant, un texte et son patron grammatical.
           items:
             type: array
             items: { $ref: '#/components/schemas/Sentence' }
-        requestedItems: { type: integer, minimum: 1 }
-        totalItems: { type: integer, minimum: 1 }
-        complete: { type: boolean }
+        requestedItems:
+          type: integer
+          minimum: 1
+          description: Total number of requested items.
+          x-description-fr: Nombre total d'éléments demandés.
+        totalItems:
+          type: integer
+          minimum: 1
+          description: Total number of returned items.
+          x-description-fr: Nombre total d'éléments retournés.
+        complete:
+          type: boolean
+          description: Whether all requested items were returned.
+          x-description-fr: Indique si tous les éléments demandés ont été retournés.
         scores:
           type: array
           description: Per-list phoneme distance, present only in phoneme_balanced mode.
+          x-description-fr: Distance phonémique de chaque liste ; présente seulement en mode phoneme_balanced.
           items: { type: number, minimum: 0 }
-        aggregateScore: { type: number, minimum: 0 }
-        poolSize: { type: integer, minimum: 0 }
+        aggregateScore:
+          type: number
+          minimum: 0
+          description: Average phoneme distance across the produced lists.
+          x-description-fr: Moyenne des distances phonémiques des listes produites.
+        poolSize:
+          type: integer
+          minimum: 0
+          description: Number of corpus items considered for phoneme balancing.
+          x-description-fr: Nombre d'éléments du corpus considérés pour l'équilibrage phonémique.
     Error:
       type: object
       additionalProperties: false
@@ -120,10 +250,17 @@ components:
       properties:
         error:
           type: object
+          description: Error details.
+          x-description-fr: Détails de l'erreur.
           additionalProperties: false
           required: [code, message]
           properties:
             code:
               type: string
               enum: [invalid_request, unsupported_language, unauthorized, forbidden, insufficient_material, corpus_unavailable, service_unavailable]
-            message: { type: string }
+              description: Stable machine-readable error code.
+              x-description-fr: Code d'erreur stable destiné aux traitements automatiques.
+            message:
+              type: string
+              description: Human-readable explanation of the error.
+              x-description-fr: Explication lisible de l'erreur.

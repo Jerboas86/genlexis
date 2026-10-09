@@ -8,6 +8,7 @@ type Schema = {
 	$ref?: string;
 	type?: string;
 	description?: string;
+	'x-description-fr'?: string;
 	enum?: unknown[];
 	const?: unknown;
 	minimum?: number;
@@ -31,7 +32,9 @@ type ApiSpec = {
 type ApiOperation = {
 	operationId: string;
 	summary: string;
+	'x-summary-fr'?: string;
 	description?: string;
+	'x-description-fr'?: string;
 	security?: Record<string, unknown>[];
 	parameters?: {
 		name: string;
@@ -43,15 +46,22 @@ type ApiOperation = {
 	requestBody?: { content?: Record<string, { schema?: Schema }> };
 	responses: Record<
 		string,
-		{ $ref?: string; description?: string; content?: Record<string, { schema?: Schema }> }
+		{
+			$ref?: string;
+			description?: string;
+			'x-description-fr'?: string;
+			content?: Record<string, { schema?: Schema }>;
+		}
 	>;
 };
+
+export type LocalizedText = { en: string; fr: string };
 
 export type DocField = {
 	name: string;
 	type: string;
 	required: boolean;
-	description: string;
+	description: LocalizedText;
 	constraints: {
 		enum?: string[];
 		minimum?: number;
@@ -71,12 +81,12 @@ export type DocEndpoint = {
 	path: string;
 	server: string;
 	resource: string;
-	title: string;
-	description: string;
-	security: string;
+	title: LocalizedText;
+	description: LocalizedText;
+	security: LocalizedText;
 	parameters: DocField[];
 	responseFields: DocField[];
-	responses: { status: string; description: string }[];
+	responses: { status: string; description: LocalizedText }[];
 	examples: DocExample[];
 };
 
@@ -96,13 +106,21 @@ function describeType(spec: ApiSpec, raw: Schema): string {
 	return schema.type ?? 'string';
 }
 
+function localized(en?: string, fr?: string): LocalizedText {
+	const english = en?.trim() ?? '';
+	return { en: english, fr: fr?.trim() ?? english };
+}
+
 function field(spec: ApiSpec, name: string, raw: Schema, required: boolean): DocField {
 	const schema = resolve(spec, raw);
 	return {
 		name,
 		type: describeType(spec, schema),
 		required,
-		description: raw.description ?? schema.description ?? '',
+		description: localized(
+			raw.description ?? schema.description,
+			raw['x-description-fr'] ?? schema['x-description-fr']
+		),
 		constraints: {
 			enum: schema.enum?.map(String),
 			minimum: schema.minimum,
@@ -168,6 +186,22 @@ const examples: Record<string, ExampleSource[]> = {
 	createGeneration: generationExamples
 };
 
+function securityDescription(spec: ApiSpec, operation: ApiOperation): LocalizedText {
+	const schemes = spec.components.securitySchemes as Record<
+		string,
+		{ description?: string; 'x-description-fr'?: string }
+	>;
+	const descriptions = (operation.security ?? spec.security ?? [])
+		.flatMap((security) => Object.keys(security))
+		.map((name) =>
+			localized(schemes?.[name]?.description ?? name, schemes?.[name]?.['x-description-fr'])
+		);
+	return {
+		en: descriptions.map((item) => item.en).join('\n'),
+		fr: descriptions.map((item) => item.fr).join('\n')
+	};
+}
+
 function endpoints(raw: string): DocEndpoint[] {
 	const spec = YAML.parse(raw) as ApiSpec;
 	return Object.entries(spec.paths).flatMap(([path, operations]) =>
@@ -182,17 +216,9 @@ function endpoints(raw: string): DocEndpoint[] {
 				path,
 				server,
 				resource: path.split('/')[2],
-				title: operation.summary,
-				description: operation.description?.trim() ?? '',
-				security: (operation.security ?? spec.security ?? [])
-					.flatMap((security) => Object.keys(security))
-					.map(
-						(name) =>
-							(spec.components.securitySchemes as Record<string, { description?: string }>)?.[
-								name
-							]?.description?.trim() ?? name
-					)
-					.join('\n'),
+				title: localized(operation.summary, operation['x-summary-fr']),
+				description: localized(operation.description, operation['x-description-fr']),
+				security: securityDescription(spec, operation),
 				parameters: [
 					...(operation.parameters ?? []).map((parameter) => {
 						const documented = field(
@@ -203,16 +229,21 @@ function endpoints(raw: string): DocEndpoint[] {
 						);
 						return {
 							...documented,
-							description: parameter.description ?? documented.description
+							description: parameter.description
+								? localized(parameter.description)
+								: documented.description
 						};
 					}),
 					...fields(spec, requestSchema)
 				],
 				responseFields: fields(spec, responseSchema),
-				responses: Object.entries(operation.responses).map(([status, response]) => ({
-					status,
-					description: resolve(spec, response).description ?? ''
-				})),
+				responses: Object.entries(operation.responses).map(([status, response]) => {
+					const documented = resolve(spec, response);
+					return {
+						status,
+						description: localized(documented.description, documented['x-description-fr'])
+					};
+				}),
 				examples: (examples[operation.operationId] ?? []).map((example) => ({
 					label: example.label,
 					request: curl(method.toUpperCase(), server, path, example.body),
